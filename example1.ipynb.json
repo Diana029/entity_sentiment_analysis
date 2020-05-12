@@ -1,0 +1,1066 @@
+{
+ "cells": [
+  {
+   "cell_type": "code",
+   "execution_count": 82,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "import os\n",
+    "curr_dir = os.getcwd()\n",
+    "os.chdir('/Users/dee/mfti_task_testing/ABSA-PyTorch')\n",
+    "\n",
+    "from models.lcf_bert import LCF_BERT\n",
+    "from models.bert_spc import BERT_SPC\n",
+    "import numpy as np\n",
+    "import torch.nn.functional as F\n",
+    "from models.lcf_bert import LCF_BERT\n",
+    "from models.aen import AEN_BERT\n",
+    "from models.bert_spc import BERT_SPC\n",
+    "from pytorch_transformers import BertModel, BertTokenizer\n",
+    "from data_utils import Tokenizer4Bert\n",
+    "import torch\n",
+    "import os\n",
+    "import pandas as pd\n",
+    "import warnings\n",
+    "import argparse\n",
+    "\n",
+    "import concurrent.futures\n",
+    "\n",
+    "warnings.filterwarnings(\"ignore\")\n",
+    "\n",
+    "os.chdir(curr_dir)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### 1. prepare data to model format"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 2,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stderr",
+     "output_type": "stream",
+     "text": [
+      "b'Skipping line 13: expected 2 fields, saw 4\\nSkipping line 18: expected 2 fields, saw 4\\nSkipping line 79: expected 2 fields, saw 3\\nSkipping line 82: expected 2 fields, saw 3\\nSkipping line 119: expected 2 fields, saw 3\\nSkipping line 120: expected 2 fields, saw 4\\nSkipping line 142: expected 2 fields, saw 5\\nSkipping line 210: expected 2 fields, saw 32\\nSkipping line 230: expected 2 fields, saw 3\\nSkipping line 233: expected 2 fields, saw 3\\nSkipping line 234: expected 2 fields, saw 3\\nSkipping line 247: expected 2 fields, saw 3\\nSkipping line 256: expected 2 fields, saw 4\\nSkipping line 260: expected 2 fields, saw 3\\nSkipping line 273: expected 2 fields, saw 3\\nSkipping line 284: expected 2 fields, saw 3\\nSkipping line 309: expected 2 fields, saw 4\\nSkipping line 316: expected 2 fields, saw 5\\nSkipping line 325: expected 2 fields, saw 3\\nSkipping line 335: expected 2 fields, saw 3\\nSkipping line 339: expected 2 fields, saw 3\\nSkipping line 342: expected 2 fields, saw 6\\nSkipping line 349: expected 2 fields, saw 4\\nSkipping line 354: expected 2 fields, saw 3\\nSkipping line 365: expected 2 fields, saw 4\\nSkipping line 379: expected 2 fields, saw 5\\nSkipping line 384: expected 2 fields, saw 5\\nSkipping line 386: expected 2 fields, saw 3\\nSkipping line 406: expected 2 fields, saw 3\\nSkipping line 408: expected 2 fields, saw 9\\nSkipping line 417: expected 2 fields, saw 3\\nSkipping line 421: expected 2 fields, saw 3\\nSkipping line 429: expected 2 fields, saw 10\\nSkipping line 433: expected 2 fields, saw 5\\nSkipping line 437: expected 2 fields, saw 3\\nSkipping line 454: expected 2 fields, saw 3\\nSkipping line 456: expected 2 fields, saw 3\\nSkipping line 485: expected 2 fields, saw 3\\nSkipping line 493: expected 2 fields, saw 3\\nSkipping line 503: expected 2 fields, saw 3\\nSkipping line 511: expected 2 fields, saw 8\\nSkipping line 513: expected 2 fields, saw 3\\nSkipping line 514: expected 2 fields, saw 3\\nSkipping line 541: expected 2 fields, saw 3\\nSkipping line 551: expected 2 fields, saw 3\\nSkipping line 555: expected 2 fields, saw 3\\nSkipping line 556: expected 2 fields, saw 3\\nSkipping line 559: expected 2 fields, saw 4\\nSkipping line 563: expected 2 fields, saw 3\\nSkipping line 579: expected 2 fields, saw 3\\nSkipping line 586: expected 2 fields, saw 3\\nSkipping line 595: expected 2 fields, saw 3\\nSkipping line 597: expected 2 fields, saw 3\\nSkipping line 619: expected 2 fields, saw 4\\nSkipping line 622: expected 2 fields, saw 3\\nSkipping line 640: expected 2 fields, saw 3\\nSkipping line 646: expected 2 fields, saw 3\\nSkipping line 656: expected 2 fields, saw 8\\nSkipping line 700: expected 2 fields, saw 3\\nSkipping line 730: expected 2 fields, saw 3\\nSkipping line 737: expected 2 fields, saw 5\\nSkipping line 738: expected 2 fields, saw 3\\nSkipping line 751: expected 2 fields, saw 126\\nSkipping line 754: expected 2 fields, saw 16\\nSkipping line 764: expected 2 fields, saw 4\\nSkipping line 770: expected 2 fields, saw 3\\nSkipping line 791: expected 2 fields, saw 3\\nSkipping line 821: expected 2 fields, saw 3\\nSkipping line 848: expected 2 fields, saw 3\\nSkipping line 854: expected 2 fields, saw 4\\nSkipping line 870: expected 2 fields, saw 4\\nSkipping line 896: expected 2 fields, saw 5\\nSkipping line 930: expected 2 fields, saw 3\\nSkipping line 964: expected 2 fields, saw 5\\nSkipping line 971: expected 2 fields, saw 4\\nSkipping line 978: expected 2 fields, saw 11\\nSkipping line 997: expected 2 fields, saw 3\\nSkipping line 1000: expected 2 fields, saw 5\\nSkipping line 1022: expected 2 fields, saw 4\\nSkipping line 1042: expected 2 fields, saw 3\\nSkipping line 1048: expected 2 fields, saw 3\\nSkipping line 1071: expected 2 fields, saw 3\\nSkipping line 1083: expected 2 fields, saw 3\\nSkipping line 1095: expected 2 fields, saw 3\\nSkipping line 1127: expected 2 fields, saw 5\\nSkipping line 1130: expected 2 fields, saw 4\\nSkipping line 1150: expected 2 fields, saw 4\\nSkipping line 1168: expected 2 fields, saw 3\\nSkipping line 1178: expected 2 fields, saw 4\\nSkipping line 1209: expected 2 fields, saw 4\\nSkipping line 1225: expected 2 fields, saw 9\\nSkipping line 1263: expected 2 fields, saw 8\\nSkipping line 1277: expected 2 fields, saw 3\\nSkipping line 1312: expected 2 fields, saw 5\\nSkipping line 1322: expected 2 fields, saw 24\\nSkipping line 1323: expected 2 fields, saw 3\\nSkipping line 1331: expected 2 fields, saw 3\\nSkipping line 1337: expected 2 fields, saw 3\\nSkipping line 1343: expected 2 fields, saw 3\\nSkipping line 1347: expected 2 fields, saw 3\\nSkipping line 1359: expected 2 fields, saw 3\\nSkipping line 1373: expected 2 fields, saw 5\\nSkipping line 1407: expected 2 fields, saw 3\\nSkipping line 1409: expected 2 fields, saw 18\\nSkipping line 1427: expected 2 fields, saw 3\\nSkipping line 1448: expected 2 fields, saw 8\\nSkipping line 1452: expected 2 fields, saw 3\\nSkipping line 1454: expected 2 fields, saw 5\\nSkipping line 1470: expected 2 fields, saw 4\\nSkipping line 1485: expected 2 fields, saw 3\\nSkipping line 1578: expected 2 fields, saw 4\\nSkipping line 1596: expected 2 fields, saw 3\\nSkipping line 1597: expected 2 fields, saw 3\\nSkipping line 1616: expected 2 fields, saw 4\\nSkipping line 1644: expected 2 fields, saw 43\\nSkipping line 1678: expected 2 fields, saw 3\\nSkipping line 1719: expected 2 fields, saw 3\\nSkipping line 1725: expected 2 fields, saw 3\\nSkipping line 1739: expected 2 fields, saw 4\\nSkipping line 1766: expected 2 fields, saw 3\\nSkipping line 1798: expected 2 fields, saw 3\\nSkipping line 1808: expected 2 fields, saw 3\\nSkipping line 1821: expected 2 fields, saw 5\\nSkipping line 1849: expected 2 fields, saw 7\\nSkipping line 1875: expected 2 fields, saw 10\\nSkipping line 1885: expected 2 fields, saw 4\\nSkipping line 1897: expected 2 fields, saw 9\\nSkipping line 1905: expected 2 fields, saw 9\\nSkipping line 1923: expected 2 fields, saw 3\\nSkipping line 1953: expected 2 fields, saw 14\\nSkipping line 1962: expected 2 fields, saw 3\\nSkipping line 1968: expected 2 fields, saw 3\\nSkipping line 1972: expected 2 fields, saw 4\\nSkipping line 1974: expected 2 fields, saw 4\\nSkipping line 1980: expected 2 fields, saw 3\\nSkipping line 2012: expected 2 fields, saw 6\\nSkipping line 2025: expected 2 fields, saw 5\\nSkipping line 2030: expected 2 fields, saw 4\\nSkipping line 2048: expected 2 fields, saw 3\\nSkipping line 2063: expected 2 fields, saw 3\\nSkipping line 2073: expected 2 fields, saw 3\\nSkipping line 2087: expected 2 fields, saw 3\\nSkipping line 2146: expected 2 fields, saw 3\\nSkipping line 2168: expected 2 fields, saw 4\\nSkipping line 2172: expected 2 fields, saw 4\\nSkipping line 2187: expected 2 fields, saw 3\\nSkipping line 2191: expected 2 fields, saw 3\\nSkipping line 2217: expected 2 fields, saw 3\\nSkipping line 2226: expected 2 fields, saw 5\\nSkipping line 2230: expected 2 fields, saw 3\\nSkipping line 2252: expected 2 fields, saw 3\\nSkipping line 2270: expected 2 fields, saw 3\\nSkipping line 2291: expected 2 fields, saw 3\\nSkipping line 2340: expected 2 fields, saw 4\\nSkipping line 2392: expected 2 fields, saw 4\\nSkipping line 2406: expected 2 fields, saw 14\\nSkipping line 2430: expected 2 fields, saw 3\\nSkipping line 2436: expected 2 fields, saw 3\\nSkipping line 2459: expected 2 fields, saw 4\\nSkipping line 2466: expected 2 fields, saw 4\\nSkipping line 2477: expected 2 fields, saw 3\\nSkipping line 2500: expected 2 fields, saw 3\\nSkipping line 2540: expected 2 fields, saw 33\\nSkipping line 2543: expected 2 fields, saw 5\\nSkipping line 2548: expected 2 fields, saw 3\\nSkipping line 2578: expected 2 fields, saw 3\\nSkipping line 2599: expected 2 fields, saw 13\\nSkipping line 2626: expected 2 fields, saw 3\\nSkipping line 2635: expected 2 fields, saw 14\\nSkipping line 2648: expected 2 fields, saw 3\\nSkipping line 2699: expected 2 fields, saw 4\\nSkipping line 2701: expected 2 fields, saw 4\\nSkipping line 2716: expected 2 fields, saw 4\\nSkipping line 2735: expected 2 fields, saw 4\\nSkipping line 2756: expected 2 fields, saw 3\\nSkipping line 2766: expected 2 fields, saw 3\\nSkipping line 2767: expected 2 fields, saw 9\\nSkipping line 2768: expected 2 fields, saw 4\\nSkipping line 2778: expected 2 fields, saw 4\\nSkipping line 2835: expected 2 fields, saw 3\\nSkipping line 2841: expected 2 fields, saw 3\\nSkipping line 2892: expected 2 fields, saw 3\\nSkipping line 2902: expected 2 fields, saw 3\\nSkipping line 2926: expected 2 fields, saw 3\\nSkipping line 2933: expected 2 fields, saw 3\\nSkipping line 2951: expected 2 fields, saw 3\\nSkipping line 2974: expected 2 fields, saw 11\\nSkipping line 2985: expected 2 fields, saw 3\\nSkipping line 3000: expected 2 fields, saw 3\\nSkipping line 3029: expected 2 fields, saw 14\\nSkipping line 3057: expected 2 fields, saw 8\\nSkipping line 3061: expected 2 fields, saw 3\\nSkipping line 3073: expected 2 fields, saw 5\\nSkipping line 3092: expected 2 fields, saw 3\\nSkipping line 3093: expected 2 fields, saw 4\\nSkipping line 3102: expected 2 fields, saw 3\\nSkipping line 3129: expected 2 fields, saw 3\\nSkipping line 3156: expected 2 fields, saw 4\\nSkipping line 3173: expected 2 fields, saw 3\\nSkipping line 3176: expected 2 fields, saw 3\\nSkipping line 3182: expected 2 fields, saw 8\\nSkipping line 3183: expected 2 fields, saw 4\\nSkipping line 3226: expected 2 fields, saw 9\\nSkipping line 3251: expected 2 fields, saw 4\\nSkipping line 3252: expected 2 fields, saw 3\\nSkipping line 3266: expected 2 fields, saw 4\\nSkipping line 3288: expected 2 fields, saw 3\\nSkipping line 3317: expected 2 fields, saw 3\\nSkipping line 3319: expected 2 fields, saw 4\\nSkipping line 3367: expected 2 fields, saw 3\\nSkipping line 3385: expected 2 fields, saw 12\\nSkipping line 3386: expected 2 fields, saw 3\\nSkipping line 3406: expected 2 fields, saw 3\\nSkipping line 3440: expected 2 fields, saw 10\\nSkipping line 3446: expected 2 fields, saw 4\\nSkipping line 3448: expected 2 fields, saw 3\\nSkipping line 3459: expected 2 fields, saw 3\\nSkipping line 3468: expected 2 fields, saw 5\\nSkipping line 3475: expected 2 fields, saw 4\\nSkipping line 3521: expected 2 fields, saw 3\\nSkipping line 3537: expected 2 fields, saw 8\\nSkipping line 3539: expected 2 fields, saw 6\\nSkipping line 3544: expected 2 fields, saw 3\\nSkipping line 3553: expected 2 fields, saw 3\\nSkipping line 3569: expected 2 fields, saw 3\\nSkipping line 3577: expected 2 fields, saw 5\\nSkipping line 3581: expected 2 fields, saw 3\\nSkipping line 3590: expected 2 fields, saw 6\\nSkipping line 3602: expected 2 fields, saw 3\\nSkipping line 3614: expected 2 fields, saw 3\\nSkipping line 3619: expected 2 fields, saw 3\\nSkipping line 3627: expected 2 fields, saw 5\\nSkipping line 3632: expected 2 fields, saw 3\\nSkipping line 3637: expected 2 fields, saw 3\\nSkipping line 3650: expected 2 fields, saw 3\\nSkipping line 3696: expected 2 fields, saw 3\\nSkipping line 3710: expected 2 fields, saw 3\\nSkipping line 3722: expected 2 fields, saw 5\\nSkipping line 3723: expected 2 fields, saw 3\\nSkipping line 3727: expected 2 fields, saw 3\\nSkipping line 3743: expected 2 fields, saw 3\\nSkipping line 3744: expected 2 fields, saw 3\\nSkipping line 3746: expected 2 fields, saw 3\\nSkipping line 3833: expected 2 fields, saw 3\\nSkipping line 3846: expected 2 fields, saw 3\\nSkipping line 3854: expected 2 fields, saw 3\\nSkipping line 3865: expected 2 fields, saw 3\\nSkipping line 3896: expected 2 fields, saw 16\\nSkipping line 3908: expected 2 fields, saw 19\\nSkipping line 3976: expected 2 fields, saw 4\\nSkipping line 3989: expected 2 fields, saw 4\\nSkipping line 3999: expected 2 fields, saw 3\\nSkipping line 4016: expected 2 fields, saw 8\\nSkipping line 4027: expected 2 fields, saw 11\\nSkipping line 4106: expected 2 fields, saw 4\\nSkipping line 4112: expected 2 fields, saw 3\\nSkipping line 4124: expected 2 fields, saw 5\\nSkipping line 4174: expected 2 fields, saw 3\\nSkipping line 4194: expected 2 fields, saw 3\\nSkipping line 4216: expected 2 fields, saw 3\\nSkipping line 4291: expected 2 fields, saw 3\\nSkipping line 4299: expected 2 fields, saw 10\\nSkipping line 4332: expected 2 fields, saw 4\\nSkipping line 4342: expected 2 fields, saw 3\\nSkipping line 4404: expected 2 fields, saw 3\\nSkipping line 4407: expected 2 fields, saw 3\\nSkipping line 4408: expected 2 fields, saw 3\\nSkipping line 4433: expected 2 fields, saw 3\\nSkipping line 4445: expected 2 fields, saw 3\\nSkipping line 4448: expected 2 fields, saw 4\\nSkipping line 4457: expected 2 fields, saw 37\\nSkipping line 4477: expected 2 fields, saw 3\\nSkipping line 4495: expected 2 fields, saw 7\\nSkipping line 4506: expected 2 fields, saw 22\\nSkipping line 4521: expected 2 fields, saw 3\\nSkipping line 4534: expected 2 fields, saw 6\\nSkipping line 4576: expected 2 fields, saw 3\\nSkipping line 4631: expected 2 fields, saw 4\\nSkipping line 4632: expected 2 fields, saw 4\\nSkipping line 4636: expected 2 fields, saw 4\\nSkipping line 4657: expected 2 fields, saw 3\\nSkipping line 4662: expected 2 fields, saw 3\\nSkipping line 4663: expected 2 fields, saw 3\\nSkipping line 4670: expected 2 fields, saw 3\\nSkipping line 4683: expected 2 fields, saw 3\\nSkipping line 4690: expected 2 fields, saw 5\\nSkipping line 4694: expected 2 fields, saw 3\\nSkipping line 4721: expected 2 fields, saw 3\\nSkipping line 4756: expected 2 fields, saw 11\\nSkipping line 4820: expected 2 fields, saw 3\\nSkipping line 4837: expected 2 fields, saw 3\\nSkipping line 4850: expected 2 fields, saw 18\\nSkipping line 4859: expected 2 fields, saw 4\\nSkipping line 4909: expected 2 fields, saw 3\\nSkipping line 4978: expected 2 fields, saw 3\\nSkipping line 4985: expected 2 fields, saw 3\\nSkipping line 4989: expected 2 fields, saw 3\\nSkipping line 5007: expected 2 fields, saw 3\\nSkipping line 5010: expected 2 fields, saw 4\\nSkipping line 5021: expected 2 fields, saw 4\\nSkipping line 5062: expected 2 fields, saw 3\\nSkipping line 5113: expected 2 fields, saw 24\\nSkipping line 5117: expected 2 fields, saw 3\\nSkipping line 5134: expected 2 fields, saw 3\\nSkipping line 5137: expected 2 fields, saw 3\\nSkipping line 5156: expected 2 fields, saw 3\\nSkipping line 5186: expected 2 fields, saw 3\\nSkipping line 5191: expected 2 fields, saw 3\\nSkipping line 5205: expected 2 fields, saw 4\\nSkipping line 5231: expected 2 fields, saw 3\\nSkipping line 5232: expected 2 fields, saw 3\\nSkipping line 5276: expected 2 fields, saw 3\\nSkipping line 5277: expected 2 fields, saw 3\\nSkipping line 5289: expected 2 fields, saw 3\\nSkipping line 5291: expected 2 fields, saw 6\\nSkipping line 5325: expected 2 fields, saw 3\\nSkipping line 5335: expected 2 fields, saw 3\\nSkipping line 5349: expected 2 fields, saw 3\\nSkipping line 5354: expected 2 fields, saw 8\\nSkipping line 5356: expected 2 fields, saw 5\\nSkipping line 5360: expected 2 fields, saw 26\\nSkipping line 5366: expected 2 fields, saw 3\\nSkipping line 5400: expected 2 fields, saw 3\\nSkipping line 5414: expected 2 fields, saw 4\\nSkipping line 5418: expected 2 fields, saw 4\\nSkipping line 5422: expected 2 fields, saw 3\\nSkipping line 5437: expected 2 fields, saw 3\\nSkipping line 5443: expected 2 fields, saw 5\\nSkipping line 5449: expected 2 fields, saw 39\\nSkipping line 5485: expected 2 fields, saw 8\\nSkipping line 5489: expected 2 fields, saw 3\\nSkipping line 5509: expected 2 fields, saw 4\\nSkipping line 5538: expected 2 fields, saw 3\\nSkipping line 5562: expected 2 fields, saw 9\\nSkipping line 5607: expected 2 fields, saw 3\\nSkipping line 5620: expected 2 fields, saw 4\\nSkipping line 5638: expected 2 fields, saw 5\\nSkipping line 5659: expected 2 fields, saw 3\\nSkipping line 5661: expected 2 fields, saw 5\\nSkipping line 5703: expected 2 fields, saw 5\\nSkipping line 5704: expected 2 fields, saw 3\\nSkipping line 5741: expected 2 fields, saw 7\\nSkipping line 5744: expected 2 fields, saw 8\\nSkipping line 5805: expected 2 fields, saw 3\\nSkipping line 5819: expected 2 fields, saw 5\\nSkipping line 5829: expected 2 fields, saw 3\\nSkipping line 5832: expected 2 fields, saw 3\\nSkipping line 5833: expected 2 fields, saw 3\\nSkipping line 5834: expected 2 fields, saw 3\\nSkipping line 5872: expected 2 fields, saw 3\\nSkipping line 5887: expected 2 fields, saw 3\\nSkipping line 5903: expected 2 fields, saw 3\\nSkipping line 5909: expected 2 fields, saw 3\\nSkipping line 5912: expected 2 fields, saw 3\\nSkipping line 5913: expected 2 fields, saw 7\\nSkipping line 5919: expected 2 fields, saw 3\\nSkipping line 5928: expected 2 fields, saw 6\\nSkipping line 5969: expected 2 fields, saw 3\\nSkipping line 5981: expected 2 fields, saw 3\\nSkipping line 5985: expected 2 fields, saw 3\\nSkipping line 5998: expected 2 fields, saw 3\\nSkipping line 6008: expected 2 fields, saw 3\\nSkipping line 6009: expected 2 fields, saw 31\\nSkipping line 6010: expected 2 fields, saw 3\\nSkipping line 6034: expected 2 fields, saw 3\\nSkipping line 6049: expected 2 fields, saw 16\\nSkipping line 6055: expected 2 fields, saw 50\\nSkipping line 6056: expected 2 fields, saw 11\\nSkipping line 6067: expected 2 fields, saw 3\\nSkipping line 6074: expected 2 fields, saw 4\\nSkipping line 6083: expected 2 fields, saw 4\\nSkipping line 6086: expected 2 fields, saw 3\\nSkipping line 6101: expected 2 fields, saw 3\\nSkipping line 6108: expected 2 fields, saw 15\\nSkipping line 6124: expected 2 fields, saw 3\\nSkipping line 6142: expected 2 fields, saw 6\\nSkipping line 6163: expected 2 fields, saw 4\\nSkipping line 6184: expected 2 fields, saw 3\\nSkipping line 6213: expected 2 fields, saw 3\\nSkipping line 6214: expected 2 fields, saw 3\\nSkipping line 6229: expected 2 fields, saw 3\\nSkipping line 6231: expected 2 fields, saw 3\\nSkipping line 6270: expected 2 fields, saw 5\\nSkipping line 6296: expected 2 fields, saw 6\\nSkipping line 6319: expected 2 fields, saw 7\\nSkipping line 6388: expected 2 fields, saw 4\\nSkipping line 6390: expected 2 fields, saw 3\\nSkipping line 6426: expected 2 fields, saw 4\\nSkipping line 6427: expected 2 fields, saw 3\\nSkipping line 6483: expected 2 fields, saw 3\\nSkipping line 6498: expected 2 fields, saw 3\\nSkipping line 6514: expected 2 fields, saw 3\\nSkipping line 6539: expected 2 fields, saw 3\\nSkipping line 6549: expected 2 fields, saw 4\\nSkipping line 6595: expected 2 fields, saw 3\\nSkipping line 6602: expected 2 fields, saw 4\\nSkipping line 6617: expected 2 fields, saw 3\\nSkipping line 6619: expected 2 fields, saw 3\\nSkipping line 6622: expected 2 fields, saw 4\\nSkipping line 6635: expected 2 fields, saw 3\\nSkipping line 6650: expected 2 fields, saw 3\\nSkipping line 6658: expected 2 fields, saw 5\\nSkipping line 6672: expected 2 fields, saw 4\\nSkipping line 6683: expected 2 fields, saw 3\\nSkipping line 6701: expected 2 fields, saw 4\\nSkipping line 6716: expected 2 fields, saw 8\\nSkipping line 6745: expected 2 fields, saw 3\\nSkipping line 6752: expected 2 fields, saw 7\\nSkipping line 6804: expected 2 fields, saw 5\\nSkipping line 6826: expected 2 fields, saw 3\\nSkipping line 6830: expected 2 fields, saw 6\\nSkipping line 6839: expected 2 fields, saw 41\\nSkipping line 6864: expected 2 fields, saw 11\\nSkipping line 6874: expected 2 fields, saw 3\\nSkipping line 6899: expected 2 fields, saw 4\\nSkipping line 6903: expected 2 fields, saw 41\\nSkipping line 6948: expected 2 fields, saw 3\\nSkipping line 6975: expected 2 fields, saw 3\\nSkipping line 7002: expected 2 fields, saw 3\\nSkipping line 7028: expected 2 fields, saw 3\\nSkipping line 7035: expected 2 fields, saw 4\\nSkipping line 7037: expected 2 fields, saw 6\\nSkipping line 7097: expected 2 fields, saw 3\\nSkipping line 7167: expected 2 fields, saw 8\\nSkipping line 7173: expected 2 fields, saw 3\\nSkipping line 7206: expected 2 fields, saw 13\\nSkipping line 7213: expected 2 fields, saw 3\\nSkipping line 7218: expected 2 fields, saw 28\\nSkipping line 7232: expected 2 fields, saw 3\\nSkipping line 7235: expected 2 fields, saw 3\\nSkipping line 7246: expected 2 fields, saw 3\\nSkipping line 7277: expected 2 fields, saw 3\\nSkipping line 7278: expected 2 fields, saw 3\\nSkipping line 7293: expected 2 fields, saw 10\\nSkipping line 7305: expected 2 fields, saw 3\\nSkipping line 7375: expected 2 fields, saw 3\\nSkipping line 7381: expected 2 fields, saw 4\\nSkipping line 7385: expected 2 fields, saw 3\\nSkipping line 7399: expected 2 fields, saw 5\\nSkipping line 7401: expected 2 fields, saw 3\\nSkipping line 7402: expected 2 fields, saw 4\\nSkipping line 7449: expected 2 fields, saw 4\\nSkipping line 7494: expected 2 fields, saw 3\\nSkipping line 7517: expected 2 fields, saw 3\\nSkipping line 7535: expected 2 fields, saw 3\\nSkipping line 7536: expected 2 fields, saw 3\\nSkipping line 7545: expected 2 fields, saw 4\\nSkipping line 7562: expected 2 fields, saw 6\\nSkipping line 7603: expected 2 fields, saw 3\\nSkipping line 7614: expected 2 fields, saw 7\\nSkipping line 7663: expected 2 fields, saw 4\\nSkipping line 7669: expected 2 fields, saw 7\\nSkipping line 7687: expected 2 fields, saw 6\\nSkipping line 7691: expected 2 fields, saw 6\\nSkipping line 7693: expected 2 fields, saw 3\\nSkipping line 7707: expected 2 fields, saw 4\\nSkipping line 7775: expected 2 fields, saw 3\\nSkipping line 7815: expected 2 fields, saw 3\\nSkipping line 7867: expected 2 fields, saw 3\\nSkipping line 7895: expected 2 fields, saw 3\\nSkipping line 7899: expected 2 fields, saw 6\\nSkipping line 7907: expected 2 fields, saw 3\\nSkipping line 7926: expected 2 fields, saw 5\\nSkipping line 7951: expected 2 fields, saw 3\\nSkipping line 8022: expected 2 fields, saw 5\\nSkipping line 8033: expected 2 fields, saw 3\\nSkipping line 8052: expected 2 fields, saw 3\\nSkipping line 8056: expected 2 fields, saw 3\\nSkipping line 8057: expected 2 fields, saw 3\\nSkipping line 8068: expected 2 fields, saw 3\\nSkipping line 8110: expected 2 fields, saw 3\\nSkipping line 8114: expected 2 fields, saw 3\\nSkipping line 8117: expected 2 fields, saw 9\\nSkipping line 8124: expected 2 fields, saw 18\\nSkipping line 8136: expected 2 fields, saw 3\\nSkipping line 8141: expected 2 fields, saw 3\\nSkipping line 8150: expected 2 fields, saw 3\\nSkipping line 8188: expected 2 fields, saw 3\\nSkipping line 8204: expected 2 fields, saw 4\\nSkipping line 8205: expected 2 fields, saw 3\\nSkipping line 8211: expected 2 fields, saw 3\\nSkipping line 8216: expected 2 fields, saw 8\\nSkipping line 8230: expected 2 fields, saw 3\\nSkipping line 8237: expected 2 fields, saw 3\\nSkipping line 8277: expected 2 fields, saw 3\\nSkipping line 8312: expected 2 fields, saw 3\\nSkipping line 8318: expected 2 fields, saw 6\\nSkipping line 8321: expected 2 fields, saw 8\\nSkipping line 8326: expected 2 fields, saw 5\\nSkipping line 8377: expected 2 fields, saw 3\\nSkipping line 8384: expected 2 fields, saw 3\\nSkipping line 8386: expected 2 fields, saw 3\\nSkipping line 8395: expected 2 fields, saw 3\\nSkipping line 8401: expected 2 fields, saw 4\\nSkipping line 8410: expected 2 fields, saw 11\\nSkipping line 8431: expected 2 fields, saw 3\\nSkipping line 8459: expected 2 fields, saw 8\\nSkipping line 8512: expected 2 fields, saw 5\\nSkipping line 8516: expected 2 fields, saw 5\\nSkipping line 8520: expected 2 fields, saw 6\\nSkipping line 8576: expected 2 fields, saw 4\\nSkipping line 8597: expected 2 fields, saw 8\\nSkipping line 8598: expected 2 fields, saw 3\\nSkipping line 8647: expected 2 fields, saw 10\\nSkipping line 8663: expected 2 fields, saw 3\\nSkipping line 8668: expected 2 fields, saw 3\\nSkipping line 8671: expected 2 fields, saw 15\\nSkipping line 8672: expected 2 fields, saw 4\\nSkipping line 8681: expected 2 fields, saw 8\\nSkipping line 8693: expected 2 fields, saw 7\\nSkipping line 8712: expected 2 fields, saw 15\\nSkipping line 8720: expected 2 fields, saw 3\\nSkipping line 8737: expected 2 fields, saw 3\\nSkipping line 8739: expected 2 fields, saw 3\\nSkipping line 8777: expected 2 fields, saw 5\\nSkipping line 8793: expected 2 fields, saw 3\\nSkipping line 8804: expected 2 fields, saw 10\\nSkipping line 8828: expected 2 fields, saw 3\\nSkipping line 8830: expected 2 fields, saw 4\\nSkipping line 8877: expected 2 fields, saw 3\\nSkipping line 8940: expected 2 fields, saw 3\\nSkipping line 8959: expected 2 fields, saw 4\\nSkipping line 9002: expected 2 fields, saw 4\\nSkipping line 9028: expected 2 fields, saw 3\\nSkipping line 9029: expected 2 fields, saw 14\\nSkipping line 9041: expected 2 fields, saw 3\\nSkipping line 9042: expected 2 fields, saw 3\\nSkipping line 9058: expected 2 fields, saw 4\\nSkipping line 9068: expected 2 fields, saw 3\\nSkipping line 9116: expected 2 fields, saw 4\\nSkipping line 9127: expected 2 fields, saw 3\\nSkipping line 9144: expected 2 fields, saw 5\\nSkipping line 9146: expected 2 fields, saw 4\\nSkipping line 9151: expected 2 fields, saw 3\\nSkipping line 9188: expected 2 fields, saw 3\\nSkipping line 9195: expected 2 fields, saw 3\\nSkipping line 9229: expected 2 fields, saw 3\\nSkipping line 9241: expected 2 fields, saw 19\\nSkipping line 9275: expected 2 fields, saw 3\\nSkipping line 9286: expected 2 fields, saw 3\\nSkipping line 9291: expected 2 fields, saw 5\\nSkipping line 9326: expected 2 fields, saw 6\\nSkipping line 9345: expected 2 fields, saw 9\\nSkipping line 9346: expected 2 fields, saw 3\\nSkipping line 9353: expected 2 fields, saw 3\\nSkipping line 9356: expected 2 fields, saw 3\\nSkipping line 9375: expected 2 fields, saw 3\\nSkipping line 9402: expected 2 fields, saw 5\\nSkipping line 9411: expected 2 fields, saw 3\\nSkipping line 9412: expected 2 fields, saw 3\\nSkipping line 9459: expected 2 fields, saw 3\\nSkipping line 9476: expected 2 fields, saw 3\\nSkipping line 9481: expected 2 fields, saw 3\\nSkipping line 9493: expected 2 fields, saw 5\\nSkipping line 9509: expected 2 fields, saw 3\\nSkipping line 9513: expected 2 fields, saw 33\\nSkipping line 9520: expected 2 fields, saw 4\\nSkipping line 9523: expected 2 fields, saw 3\\nSkipping line 9549: expected 2 fields, saw 10\\nSkipping line 9562: expected 2 fields, saw 6\\nSkipping line 9566: expected 2 fields, saw 3\\nSkipping line 9571: expected 2 fields, saw 3\\nSkipping line 9581: expected 2 fields, saw 3\\nSkipping line 9632: expected 2 fields, saw 4\\nSkipping line 9639: expected 2 fields, saw 3\\nSkipping line 9680: expected 2 fields, saw 4\\nSkipping line 9713: expected 2 fields, saw 3\\nSkipping line 9721: expected 2 fields, saw 3\\nSkipping line 9732: expected 2 fields, saw 3\\nSkipping line 9766: expected 2 fields, saw 3\\nSkipping line 9771: expected 2 fields, saw 3\\nSkipping line 9807: expected 2 fields, saw 5\\nSkipping line 9823: expected 2 fields, saw 4\\nSkipping line 9824: expected 2 fields, saw 3\\nSkipping line 9844: expected 2 fields, saw 3\\nSkipping line 9894: expected 2 fields, saw 3\\nSkipping line 9898: expected 2 fields, saw 3\\nSkipping line 9910: expected 2 fields, saw 6\\nSkipping line 9941: expected 2 fields, saw 3\\nSkipping line 9944: expected 2 fields, saw 5\\n'\n",
+      "b'Skipping line 25: expected 2 fields, saw 3\\nSkipping line 49: expected 2 fields, saw 3\\nSkipping line 60: expected 2 fields, saw 4\\nSkipping line 62: expected 2 fields, saw 3\\nSkipping line 73: expected 2 fields, saw 3\\nSkipping line 93: expected 2 fields, saw 10\\nSkipping line 110: expected 2 fields, saw 7\\nSkipping line 113: expected 2 fields, saw 5\\nSkipping line 131: expected 2 fields, saw 3\\nSkipping line 132: expected 2 fields, saw 3\\nSkipping line 143: expected 2 fields, saw 8\\nSkipping line 174: expected 2 fields, saw 3\\nSkipping line 175: expected 2 fields, saw 6\\nSkipping line 186: expected 2 fields, saw 3\\nSkipping line 190: expected 2 fields, saw 3\\nSkipping line 261: expected 2 fields, saw 3\\nSkipping line 271: expected 2 fields, saw 3\\nSkipping line 273: expected 2 fields, saw 4\\nSkipping line 300: expected 2 fields, saw 3\\nSkipping line 308: expected 2 fields, saw 3\\nSkipping line 332: expected 2 fields, saw 3\\nSkipping line 362: expected 2 fields, saw 3\\nSkipping line 372: expected 2 fields, saw 3\\nSkipping line 388: expected 2 fields, saw 4\\nSkipping line 427: expected 2 fields, saw 3\\nSkipping line 445: expected 2 fields, saw 3\\nSkipping line 451: expected 2 fields, saw 3\\nSkipping line 458: expected 2 fields, saw 3\\nSkipping line 488: expected 2 fields, saw 3\\nSkipping line 505: expected 2 fields, saw 3\\nSkipping line 511: expected 2 fields, saw 3\\nSkipping line 567: expected 2 fields, saw 5\\nSkipping line 580: expected 2 fields, saw 7\\nSkipping line 598: expected 2 fields, saw 6\\nSkipping line 610: expected 2 fields, saw 4\\nSkipping line 645: expected 2 fields, saw 8\\nSkipping line 652: expected 2 fields, saw 3\\nSkipping line 658: expected 2 fields, saw 6\\nSkipping line 665: expected 2 fields, saw 3\\nSkipping line 666: expected 2 fields, saw 4\\nSkipping line 667: expected 2 fields, saw 5\\nSkipping line 683: expected 2 fields, saw 3\\nSkipping line 709: expected 2 fields, saw 5\\nSkipping line 710: expected 2 fields, saw 5\\nSkipping line 726: expected 2 fields, saw 4\\nSkipping line 740: expected 2 fields, saw 4\\nSkipping line 747: expected 2 fields, saw 3\\nSkipping line 766: expected 2 fields, saw 4\\nSkipping line 789: expected 2 fields, saw 6\\nSkipping line 797: expected 2 fields, saw 3\\nSkipping line 798: expected 2 fields, saw 3\\nSkipping line 805: expected 2 fields, saw 4\\nSkipping line 869: expected 2 fields, saw 8\\nSkipping line 890: expected 2 fields, saw 4\\nSkipping line 925: expected 2 fields, saw 3\\nSkipping line 965: expected 2 fields, saw 6\\nSkipping line 1022: expected 2 fields, saw 22\\nSkipping line 1029: expected 2 fields, saw 15\\nSkipping line 1032: expected 2 fields, saw 3\\nSkipping line 1047: expected 2 fields, saw 6\\nSkipping line 1067: expected 2 fields, saw 34\\nSkipping line 1071: expected 2 fields, saw 3\\nSkipping line 1096: expected 2 fields, saw 4\\nSkipping line 1129: expected 2 fields, saw 3\\nSkipping line 1146: expected 2 fields, saw 3\\nSkipping line 1169: expected 2 fields, saw 3\\nSkipping line 1176: expected 2 fields, saw 5\\nSkipping line 1203: expected 2 fields, saw 7\\nSkipping line 1221: expected 2 fields, saw 3\\nSkipping line 1239: expected 2 fields, saw 3\\nSkipping line 1243: expected 2 fields, saw 3\\nSkipping line 1250: expected 2 fields, saw 3\\nSkipping line 1265: expected 2 fields, saw 3\\nSkipping line 1270: expected 2 fields, saw 53\\nSkipping line 1274: expected 2 fields, saw 3\\nSkipping line 1315: expected 2 fields, saw 3\\nSkipping line 1325: expected 2 fields, saw 3\\nSkipping line 1327: expected 2 fields, saw 3\\nSkipping line 1381: expected 2 fields, saw 7\\nSkipping line 1387: expected 2 fields, saw 3\\nSkipping line 1404: expected 2 fields, saw 3\\nSkipping line 1454: expected 2 fields, saw 3\\nSkipping line 1471: expected 2 fields, saw 3\\nSkipping line 1492: expected 2 fields, saw 5\\nSkipping line 1520: expected 2 fields, saw 5\\nSkipping line 1541: expected 2 fields, saw 3\\nSkipping line 1550: expected 2 fields, saw 3\\nSkipping line 1581: expected 2 fields, saw 3\\nSkipping line 1582: expected 2 fields, saw 3\\nSkipping line 1591: expected 2 fields, saw 3\\nSkipping line 1681: expected 2 fields, saw 3\\nSkipping line 1688: expected 2 fields, saw 25\\nSkipping line 1697: expected 2 fields, saw 3\\nSkipping line 1715: expected 2 fields, saw 3\\nSkipping line 1728: expected 2 fields, saw 4\\nSkipping line 1735: expected 2 fields, saw 3\\nSkipping line 1759: expected 2 fields, saw 15\\nSkipping line 1885: expected 2 fields, saw 3\\nSkipping line 1896: expected 2 fields, saw 3\\nSkipping line 1910: expected 2 fields, saw 3\\nSkipping line 1939: expected 2 fields, saw 3\\nSkipping line 1948: expected 2 fields, saw 4\\nSkipping line 1979: expected 2 fields, saw 3\\nSkipping line 1984: expected 2 fields, saw 3\\nSkipping line 1997: expected 2 fields, saw 21\\nSkipping line 2023: expected 2 fields, saw 3\\nSkipping line 2026: expected 2 fields, saw 3\\nSkipping line 2100: expected 2 fields, saw 5\\nSkipping line 2132: expected 2 fields, saw 4\\nSkipping line 2142: expected 2 fields, saw 3\\nSkipping line 2151: expected 2 fields, saw 3\\nSkipping line 2157: expected 2 fields, saw 6\\nSkipping line 2163: expected 2 fields, saw 3\\nSkipping line 2174: expected 2 fields, saw 4\\nSkipping line 2192: expected 2 fields, saw 10\\nSkipping line 2196: expected 2 fields, saw 20\\nSkipping line 2203: expected 2 fields, saw 9\\nSkipping line 2230: expected 2 fields, saw 3\\nSkipping line 2245: expected 2 fields, saw 4\\nSkipping line 2256: expected 2 fields, saw 3\\nSkipping line 2263: expected 2 fields, saw 9\\nSkipping line 2281: expected 2 fields, saw 4\\nSkipping line 2283: expected 2 fields, saw 4\\nSkipping line 2310: expected 2 fields, saw 4\\nSkipping line 2342: expected 2 fields, saw 3\\nSkipping line 2347: expected 2 fields, saw 3\\nSkipping line 2358: expected 2 fields, saw 3\\nSkipping line 2366: expected 2 fields, saw 4\\nSkipping line 2373: expected 2 fields, saw 3\\nSkipping line 2379: expected 2 fields, saw 3\\nSkipping line 2396: expected 2 fields, saw 3\\nSkipping line 2404: expected 2 fields, saw 3\\nSkipping line 2407: expected 2 fields, saw 3\\nSkipping line 2415: expected 2 fields, saw 4\\nSkipping line 2432: expected 2 fields, saw 3\\nSkipping line 2480: expected 2 fields, saw 5\\nSkipping line 2485: expected 2 fields, saw 3\\nSkipping line 2520: expected 2 fields, saw 3\\nSkipping line 2558: expected 2 fields, saw 4\\nSkipping line 2577: expected 2 fields, saw 5\\nSkipping line 2599: expected 2 fields, saw 3\\nSkipping line 2630: expected 2 fields, saw 5\\nSkipping line 2656: expected 2 fields, saw 3\\nSkipping line 2666: expected 2 fields, saw 3\\nSkipping line 2674: expected 2 fields, saw 3\\nSkipping line 2721: expected 2 fields, saw 4\\nSkipping line 2745: expected 2 fields, saw 3\\nSkipping line 2762: expected 2 fields, saw 4\\nSkipping line 2789: expected 2 fields, saw 4\\nSkipping line 2799: expected 2 fields, saw 3\\nSkipping line 2808: expected 2 fields, saw 3\\nSkipping line 2815: expected 2 fields, saw 10\\nSkipping line 2856: expected 2 fields, saw 4\\nSkipping line 2892: expected 2 fields, saw 3\\nSkipping line 2904: expected 2 fields, saw 3\\nSkipping line 2913: expected 2 fields, saw 4\\nSkipping line 2919: expected 2 fields, saw 6\\nSkipping line 2925: expected 2 fields, saw 3\\nSkipping line 2926: expected 2 fields, saw 3\\nSkipping line 2927: expected 2 fields, saw 3\\nSkipping line 2930: expected 2 fields, saw 3\\nSkipping line 2948: expected 2 fields, saw 3\\nSkipping line 2950: expected 2 fields, saw 3\\nSkipping line 2962: expected 2 fields, saw 3\\nSkipping line 2973: expected 2 fields, saw 21\\nSkipping line 2989: expected 2 fields, saw 3\\nSkipping line 3013: expected 2 fields, saw 33\\nSkipping line 3017: expected 2 fields, saw 6\\nSkipping line 3018: expected 2 fields, saw 3\\nSkipping line 3041: expected 2 fields, saw 4\\nSkipping line 3068: expected 2 fields, saw 3\\nSkipping line 3092: expected 2 fields, saw 3\\nSkipping line 3100: expected 2 fields, saw 3\\nSkipping line 3113: expected 2 fields, saw 3\\nSkipping line 3126: expected 2 fields, saw 5\\nSkipping line 3127: expected 2 fields, saw 3\\nSkipping line 3129: expected 2 fields, saw 3\\nSkipping line 3132: expected 2 fields, saw 3\\nSkipping line 3147: expected 2 fields, saw 12\\nSkipping line 3162: expected 2 fields, saw 3\\nSkipping line 3178: expected 2 fields, saw 3\\nSkipping line 3189: expected 2 fields, saw 3\\nSkipping line 3196: expected 2 fields, saw 19\\nSkipping line 3198: expected 2 fields, saw 7\\nSkipping line 3271: expected 2 fields, saw 3\\nSkipping line 3282: expected 2 fields, saw 3\\nSkipping line 3290: expected 2 fields, saw 8\\nSkipping line 3342: expected 2 fields, saw 7\\nSkipping line 3349: expected 2 fields, saw 3\\nSkipping line 3366: expected 2 fields, saw 12\\nSkipping line 3379: expected 2 fields, saw 6\\nSkipping line 3383: expected 2 fields, saw 15\\nSkipping line 3388: expected 2 fields, saw 3\\nSkipping line 3405: expected 2 fields, saw 3\\nSkipping line 3446: expected 2 fields, saw 3\\nSkipping line 3451: expected 2 fields, saw 3\\nSkipping line 3467: expected 2 fields, saw 3\\nSkipping line 3478: expected 2 fields, saw 4\\nSkipping line 3516: expected 2 fields, saw 3\\nSkipping line 3575: expected 2 fields, saw 4\\nSkipping line 3610: expected 2 fields, saw 9\\nSkipping line 3617: expected 2 fields, saw 3\\nSkipping line 3627: expected 2 fields, saw 3\\nSkipping line 3661: expected 2 fields, saw 3\\nSkipping line 3670: expected 2 fields, saw 13\\nSkipping line 3685: expected 2 fields, saw 5\\nSkipping line 3736: expected 2 fields, saw 14\\nSkipping line 3761: expected 2 fields, saw 5\\nSkipping line 3773: expected 2 fields, saw 5\\nSkipping line 3778: expected 2 fields, saw 4\\nSkipping line 3779: expected 2 fields, saw 6\\nSkipping line 3808: expected 2 fields, saw 3\\nSkipping line 3828: expected 2 fields, saw 3\\nSkipping line 3853: expected 2 fields, saw 4\\nSkipping line 3887: expected 2 fields, saw 3\\nSkipping line 3904: expected 2 fields, saw 3\\nSkipping line 3910: expected 2 fields, saw 3\\nSkipping line 3923: expected 2 fields, saw 3\\nSkipping line 3964: expected 2 fields, saw 4\\nSkipping line 3972: expected 2 fields, saw 3\\nSkipping line 3992: expected 2 fields, saw 3\\nSkipping line 4009: expected 2 fields, saw 3\\nSkipping line 4024: expected 2 fields, saw 6\\nSkipping line 4038: expected 2 fields, saw 3\\nSkipping line 4065: expected 2 fields, saw 4\\nSkipping line 4110: expected 2 fields, saw 4\\nSkipping line 4115: expected 2 fields, saw 3\\nSkipping line 4122: expected 2 fields, saw 8\\nSkipping line 4124: expected 2 fields, saw 3\\nSkipping line 4129: expected 2 fields, saw 5\\nSkipping line 4158: expected 2 fields, saw 3\\nSkipping line 4193: expected 2 fields, saw 3\\nSkipping line 4247: expected 2 fields, saw 3\\nSkipping line 4251: expected 2 fields, saw 14\\nSkipping line 4265: expected 2 fields, saw 3\\nSkipping line 4268: expected 2 fields, saw 3\\nSkipping line 4275: expected 2 fields, saw 4\\nSkipping line 4277: expected 2 fields, saw 6\\nSkipping line 4282: expected 2 fields, saw 3\\nSkipping line 4292: expected 2 fields, saw 3\\nSkipping line 4301: expected 2 fields, saw 3\\nSkipping line 4322: expected 2 fields, saw 3\\nSkipping line 4325: expected 2 fields, saw 3\\nSkipping line 4330: expected 2 fields, saw 3\\nSkipping line 4336: expected 2 fields, saw 13\\nSkipping line 4368: expected 2 fields, saw 3\\nSkipping line 4420: expected 2 fields, saw 4\\nSkipping line 4454: expected 2 fields, saw 4\\nSkipping line 4459: expected 2 fields, saw 3\\nSkipping line 4471: expected 2 fields, saw 3\\nSkipping line 4490: expected 2 fields, saw 3\\nSkipping line 4558: expected 2 fields, saw 3\\nSkipping line 4598: expected 2 fields, saw 3\\nSkipping line 4618: expected 2 fields, saw 5\\nSkipping line 4657: expected 2 fields, saw 3\\nSkipping line 4677: expected 2 fields, saw 3\\nSkipping line 4701: expected 2 fields, saw 3\\nSkipping line 4704: expected 2 fields, saw 3\\nSkipping line 4716: expected 2 fields, saw 3\\nSkipping line 4760: expected 2 fields, saw 3\\nSkipping line 4762: expected 2 fields, saw 7\\nSkipping line 4775: expected 2 fields, saw 3\\nSkipping line 4777: expected 2 fields, saw 3\\nSkipping line 4831: expected 2 fields, saw 3\\nSkipping line 4874: expected 2 fields, saw 4\\nSkipping line 4885: expected 2 fields, saw 3\\nSkipping line 4891: expected 2 fields, saw 3\\nSkipping line 4908: expected 2 fields, saw 4\\nSkipping line 4951: expected 2 fields, saw 6\\nSkipping line 4955: expected 2 fields, saw 3\\nSkipping line 4978: expected 2 fields, saw 10\\nSkipping line 4991: expected 2 fields, saw 3\\nSkipping line 5041: expected 2 fields, saw 5\\nSkipping line 5078: expected 2 fields, saw 3\\nSkipping line 5082: expected 2 fields, saw 3\\nSkipping line 5093: expected 2 fields, saw 3\\nSkipping line 5124: expected 2 fields, saw 3\\nSkipping line 5140: expected 2 fields, saw 4\\nSkipping line 5164: expected 2 fields, saw 5\\nSkipping line 5213: expected 2 fields, saw 3\\nSkipping line 5230: expected 2 fields, saw 3\\nSkipping line 5231: expected 2 fields, saw 3\\nSkipping line 5238: expected 2 fields, saw 4\\nSkipping line 5245: expected 2 fields, saw 7\\nSkipping line 5249: expected 2 fields, saw 3\\nSkipping line 5264: expected 2 fields, saw 10\\nSkipping line 5272: expected 2 fields, saw 3\\nSkipping line 5295: expected 2 fields, saw 3\\nSkipping line 5345: expected 2 fields, saw 3\\nSkipping line 5349: expected 2 fields, saw 3\\nSkipping line 5353: expected 2 fields, saw 3\\nSkipping line 5381: expected 2 fields, saw 3\\nSkipping line 5403: expected 2 fields, saw 6\\nSkipping line 5405: expected 2 fields, saw 4\\nSkipping line 5410: expected 2 fields, saw 3\\nSkipping line 5426: expected 2 fields, saw 3\\nSkipping line 5435: expected 2 fields, saw 7\\nSkipping line 5452: expected 2 fields, saw 3\\nSkipping line 5459: expected 2 fields, saw 3\\nSkipping line 5473: expected 2 fields, saw 3\\nSkipping line 5480: expected 2 fields, saw 19\\nSkipping line 5508: expected 2 fields, saw 4\\nSkipping line 5517: expected 2 fields, saw 3\\nSkipping line 5545: expected 2 fields, saw 3\\nSkipping line 5547: expected 2 fields, saw 3\\nSkipping line 5551: expected 2 fields, saw 3\\nSkipping line 5562: expected 2 fields, saw 3\\nSkipping line 5584: expected 2 fields, saw 3\\nSkipping line 5600: expected 2 fields, saw 4\\nSkipping line 5607: expected 2 fields, saw 3\\nSkipping line 5616: expected 2 fields, saw 10\\nSkipping line 5632: expected 2 fields, saw 4\\nSkipping line 5633: expected 2 fields, saw 15\\nSkipping line 5651: expected 2 fields, saw 3\\nSkipping line 5663: expected 2 fields, saw 11\\nSkipping line 5667: expected 2 fields, saw 3\\nSkipping line 5672: expected 2 fields, saw 3\\nSkipping line 5713: expected 2 fields, saw 14\\nSkipping line 5731: expected 2 fields, saw 3\\nSkipping line 5732: expected 2 fields, saw 3\\nSkipping line 5743: expected 2 fields, saw 5\\nSkipping line 5754: expected 2 fields, saw 6\\nSkipping line 5841: expected 2 fields, saw 4\\nSkipping line 5846: expected 2 fields, saw 9\\nSkipping line 5881: expected 2 fields, saw 3\\nSkipping line 5885: expected 2 fields, saw 3\\nSkipping line 5897: expected 2 fields, saw 17\\nSkipping line 5904: expected 2 fields, saw 3\\nSkipping line 5927: expected 2 fields, saw 4\\nSkipping line 5934: expected 2 fields, saw 3\\nSkipping line 5945: expected 2 fields, saw 5\\nSkipping line 5984: expected 2 fields, saw 3\\nSkipping line 5989: expected 2 fields, saw 3\\nSkipping line 6004: expected 2 fields, saw 9\\nSkipping line 6006: expected 2 fields, saw 3\\nSkipping line 6033: expected 2 fields, saw 3\\nSkipping line 6054: expected 2 fields, saw 8\\nSkipping line 6061: expected 2 fields, saw 3\\nSkipping line 6079: expected 2 fields, saw 4\\nSkipping line 6090: expected 2 fields, saw 3\\nSkipping line 6117: expected 2 fields, saw 4\\nSkipping line 6131: expected 2 fields, saw 3\\nSkipping line 6162: expected 2 fields, saw 3\\nSkipping line 6188: expected 2 fields, saw 3\\nSkipping line 6197: expected 2 fields, saw 4\\nSkipping line 6222: expected 2 fields, saw 3\\nSkipping line 6224: expected 2 fields, saw 3\\nSkipping line 6231: expected 2 fields, saw 3\\nSkipping line 6234: expected 2 fields, saw 4\\nSkipping line 6268: expected 2 fields, saw 3\\nSkipping line 6284: expected 2 fields, saw 4\\nSkipping line 6330: expected 2 fields, saw 4\\nSkipping line 6337: expected 2 fields, saw 9\\nSkipping line 6348: expected 2 fields, saw 3\\nSkipping line 6366: expected 2 fields, saw 3\\nSkipping line 6382: expected 2 fields, saw 3\\nSkipping line 6383: expected 2 fields, saw 5\\nSkipping line 6391: expected 2 fields, saw 3\\nSkipping line 6392: expected 2 fields, saw 3\\nSkipping line 6404: expected 2 fields, saw 3\\nSkipping line 6415: expected 2 fields, saw 3\\nSkipping line 6440: expected 2 fields, saw 3\\nSkipping line 6451: expected 2 fields, saw 3\\nSkipping line 6494: expected 2 fields, saw 3\\nSkipping line 6500: expected 2 fields, saw 3\\nSkipping line 6529: expected 2 fields, saw 3\\nSkipping line 6540: expected 2 fields, saw 3\\nSkipping line 6561: expected 2 fields, saw 8\\nSkipping line 6611: expected 2 fields, saw 4\\nSkipping line 6632: expected 2 fields, saw 3\\nSkipping line 6648: expected 2 fields, saw 3\\nSkipping line 6654: expected 2 fields, saw 5\\nSkipping line 6672: expected 2 fields, saw 3\\nSkipping line 6678: expected 2 fields, saw 3\\nSkipping line 6681: expected 2 fields, saw 3\\nSkipping line 6714: expected 2 fields, saw 4\\nSkipping line 6716: expected 2 fields, saw 8\\nSkipping line 6717: expected 2 fields, saw 3\\nSkipping line 6720: expected 2 fields, saw 10\\nSkipping line 6760: expected 2 fields, saw 3\\nSkipping line 6781: expected 2 fields, saw 4\\nSkipping line 6794: expected 2 fields, saw 3\\nSkipping line 6795: expected 2 fields, saw 3\\nSkipping line 6817: expected 2 fields, saw 7\\nSkipping line 6837: expected 2 fields, saw 3\\nSkipping line 6868: expected 2 fields, saw 3\\nSkipping line 6912: expected 2 fields, saw 3\\nSkipping line 6943: expected 2 fields, saw 3\\nSkipping line 6966: expected 2 fields, saw 3\\nSkipping line 6985: expected 2 fields, saw 3\\nSkipping line 7016: expected 2 fields, saw 3\\nSkipping line 7061: expected 2 fields, saw 3\\nSkipping line 7077: expected 2 fields, saw 3\\nSkipping line 7096: expected 2 fields, saw 3\\nSkipping line 7122: expected 2 fields, saw 4\\nSkipping line 7158: expected 2 fields, saw 3\\nSkipping line 7161: expected 2 fields, saw 4\\nSkipping line 7177: expected 2 fields, saw 4\\nSkipping line 7208: expected 2 fields, saw 9\\nSkipping line 7232: expected 2 fields, saw 4\\nSkipping line 7236: expected 2 fields, saw 3\\nSkipping line 7274: expected 2 fields, saw 3\\nSkipping line 7322: expected 2 fields, saw 3\\nSkipping line 7328: expected 2 fields, saw 34\\nSkipping line 7340: expected 2 fields, saw 9\\nSkipping line 7363: expected 2 fields, saw 5\\nSkipping line 7376: expected 2 fields, saw 3\\nSkipping line 7412: expected 2 fields, saw 3\\nSkipping line 7425: expected 2 fields, saw 3\\nSkipping line 7461: expected 2 fields, saw 4\\nSkipping line 7474: expected 2 fields, saw 4\\nSkipping line 7480: expected 2 fields, saw 4\\nSkipping line 7496: expected 2 fields, saw 11\\nSkipping line 7554: expected 2 fields, saw 4\\nSkipping line 7570: expected 2 fields, saw 10\\nSkipping line 7600: expected 2 fields, saw 4\\nSkipping line 7602: expected 2 fields, saw 3\\nSkipping line 7610: expected 2 fields, saw 4\\nSkipping line 7636: expected 2 fields, saw 5\\nSkipping line 7645: expected 2 fields, saw 3\\nSkipping line 7650: expected 2 fields, saw 3\\nSkipping line 7679: expected 2 fields, saw 4\\nSkipping line 7710: expected 2 fields, saw 3\\nSkipping line 7711: expected 2 fields, saw 3\\nSkipping line 7721: expected 2 fields, saw 5\\nSkipping line 7722: expected 2 fields, saw 3\\nSkipping line 7727: expected 2 fields, saw 3\\nSkipping line 7739: expected 2 fields, saw 7\\nSkipping line 7743: expected 2 fields, saw 3\\nSkipping line 7779: expected 2 fields, saw 3\\nSkipping line 7793: expected 2 fields, saw 3\\nSkipping line 7794: expected 2 fields, saw 6\\nSkipping line 7798: expected 2 fields, saw 5\\nSkipping line 7810: expected 2 fields, saw 3\\nSkipping line 7831: expected 2 fields, saw 5\\nSkipping line 7842: expected 2 fields, saw 3\\nSkipping line 7868: expected 2 fields, saw 4\\nSkipping line 7875: expected 2 fields, saw 4\\nSkipping line 7894: expected 2 fields, saw 3\\nSkipping line 7897: expected 2 fields, saw 3\\nSkipping line 7910: expected 2 fields, saw 4\\nSkipping line 7931: expected 2 fields, saw 34\\nSkipping line 7965: expected 2 fields, saw 5\\nSkipping line 7966: expected 2 fields, saw 3\\nSkipping line 7988: expected 2 fields, saw 4\\nSkipping line 8004: expected 2 fields, saw 3\\nSkipping line 8005: expected 2 fields, saw 3\\nSkipping line 8032: expected 2 fields, saw 3\\nSkipping line 8036: expected 2 fields, saw 3\\nSkipping line 8052: expected 2 fields, saw 3\\nSkipping line 8089: expected 2 fields, saw 3\\nSkipping line 8117: expected 2 fields, saw 6\\nSkipping line 8140: expected 2 fields, saw 13\\nSkipping line 8143: expected 2 fields, saw 7\\nSkipping line 8165: expected 2 fields, saw 3\\nSkipping line 8190: expected 2 fields, saw 3\\nSkipping line 8204: expected 2 fields, saw 3\\nSkipping line 8222: expected 2 fields, saw 3\\nSkipping line 8276: expected 2 fields, saw 11\\nSkipping line 8278: expected 2 fields, saw 3\\nSkipping line 8297: expected 2 fields, saw 3\\nSkipping line 8298: expected 2 fields, saw 4\\nSkipping line 8309: expected 2 fields, saw 3\\nSkipping line 8313: expected 2 fields, saw 3\\nSkipping line 8316: expected 2 fields, saw 6\\nSkipping line 8323: expected 2 fields, saw 22\\nSkipping line 8348: expected 2 fields, saw 4\\nSkipping line 8358: expected 2 fields, saw 19\\nSkipping line 8363: expected 2 fields, saw 3\\nSkipping line 8370: expected 2 fields, saw 7\\nSkipping line 8389: expected 2 fields, saw 3\\nSkipping line 8394: expected 2 fields, saw 5\\nSkipping line 8395: expected 2 fields, saw 4\\nSkipping line 8402: expected 2 fields, saw 5\\nSkipping line 8409: expected 2 fields, saw 13\\nSkipping line 8443: expected 2 fields, saw 3\\nSkipping line 8462: expected 2 fields, saw 14\\nSkipping line 8481: expected 2 fields, saw 6\\nSkipping line 8512: expected 2 fields, saw 3\\nSkipping line 8514: expected 2 fields, saw 3\\nSkipping line 8520: expected 2 fields, saw 3\\nSkipping line 8534: expected 2 fields, saw 3\\nSkipping line 8551: expected 2 fields, saw 4\\nSkipping line 8552: expected 2 fields, saw 3\\nSkipping line 8570: expected 2 fields, saw 23\\nSkipping line 8580: expected 2 fields, saw 3\\nSkipping line 8644: expected 2 fields, saw 3\\nSkipping line 8646: expected 2 fields, saw 3\\nSkipping line 8709: expected 2 fields, saw 4\\nSkipping line 8799: expected 2 fields, saw 6\\nSkipping line 8818: expected 2 fields, saw 3\\nSkipping line 8820: expected 2 fields, saw 4\\nSkipping line 8842: expected 2 fields, saw 3\\nSkipping line 8866: expected 2 fields, saw 3\\nSkipping line 8870: expected 2 fields, saw 13\\nSkipping line 8873: expected 2 fields, saw 3\\nSkipping line 8894: expected 2 fields, saw 3\\nSkipping line 8937: expected 2 fields, saw 5\\nSkipping line 8960: expected 2 fields, saw 3\\nSkipping line 8978: expected 2 fields, saw 3\\nSkipping line 9060: expected 2 fields, saw 6\\nSkipping line 9125: expected 2 fields, saw 10\\nSkipping line 9146: expected 2 fields, saw 3\\nSkipping line 9165: expected 2 fields, saw 3\\nSkipping line 9179: expected 2 fields, saw 3\\nSkipping line 9186: expected 2 fields, saw 3\\nSkipping line 9198: expected 2 fields, saw 4\\nSkipping line 9223: expected 2 fields, saw 3\\nSkipping line 9225: expected 2 fields, saw 5\\nSkipping line 9226: expected 2 fields, saw 3\\nSkipping line 9263: expected 2 fields, saw 13\\nSkipping line 9268: expected 2 fields, saw 4\\nSkipping line 9290: expected 2 fields, saw 4\\nSkipping line 9292: expected 2 fields, saw 5\\nSkipping line 9294: expected 2 fields, saw 4\\nSkipping line 9303: expected 2 fields, saw 10\\nSkipping line 9304: expected 2 fields, saw 3\\nSkipping line 9354: expected 2 fields, saw 4\\nSkipping line 9366: expected 2 fields, saw 7\\nSkipping line 9388: expected 2 fields, saw 4\\nSkipping line 9403: expected 2 fields, saw 4\\nSkipping line 9407: expected 2 fields, saw 3\\nSkipping line 9431: expected 2 fields, saw 4\\nSkipping line 9451: expected 2 fields, saw 3\\nSkipping line 9466: expected 2 fields, saw 4\\nSkipping line 9478: expected 2 fields, saw 3\\nSkipping line 9492: expected 2 fields, saw 5\\nSkipping line 9559: expected 2 fields, saw 4\\nSkipping line 9571: expected 2 fields, saw 5\\nSkipping line 9591: expected 2 fields, saw 9\\nSkipping line 9594: expected 2 fields, saw 9\\nSkipping line 9599: expected 2 fields, saw 3\\nSkipping line 9602: expected 2 fields, saw 4\\nSkipping line 9623: expected 2 fields, saw 5\\nSkipping line 9629: expected 2 fields, saw 4\\nSkipping line 9635: expected 2 fields, saw 3\\nSkipping line 9644: expected 2 fields, saw 3\\nSkipping line 9661: expected 2 fields, saw 3\\nSkipping line 9667: expected 2 fields, saw 3\\nSkipping line 9669: expected 2 fields, saw 3\\nSkipping line 9680: expected 2 fields, saw 33\\nSkipping line 9733: expected 2 fields, saw 22\\nSkipping line 9749: expected 2 fields, saw 19\\nSkipping line 9775: expected 2 fields, saw 3\\nSkipping line 9785: expected 2 fields, saw 9\\nSkipping line 9788: expected 2 fields, saw 3\\nSkipping line 9801: expected 2 fields, saw 4\\nSkipping line 9815: expected 2 fields, saw 3\\nSkipping line 9827: expected 2 fields, saw 3\\nSkipping line 9828: expected 2 fields, saw 3\\nSkipping line 9838: expected 2 fields, saw 5\\nSkipping line 9846: expected 2 fields, saw 5\\nSkipping line 9874: expected 2 fields, saw 3\\nSkipping line 9875: expected 2 fields, saw 3\\nSkipping line 9928: expected 2 fields, saw 3\\nSkipping line 9931: expected 2 fields, saw 3\\nSkipping line 9967: expected 2 fields, saw 3\\nSkipping line 9969: expected 2 fields, saw 3\\nSkipping line 9983: expected 2 fields, saw 26\\nSkipping line 9986: expected 2 fields, saw 3\\nSkipping line 9988: expected 2 fields, saw 3\\nSkipping line 10069: expected 2 fields, saw 14\\nSkipping line 10108: expected 2 fields, saw 4\\nSkipping line 10122: expected 2 fields, saw 3\\nSkipping line 10155: expected 2 fields, saw 11\\nSkipping line 10172: expected 2 fields, saw 3\\nSkipping line 10174: expected 2 fields, saw 34\\nSkipping line 10187: expected 2 fields, saw 3\\nSkipping line 10213: expected 2 fields, saw 4\\nSkipping line 10237: expected 2 fields, saw 3\\nSkipping line 10252: expected 2 fields, saw 3\\nSkipping line 10254: expected 2 fields, saw 4\\nSkipping line 10262: expected 2 fields, saw 4\\nSkipping line 10281: expected 2 fields, saw 3\\nSkipping line 10323: expected 2 fields, saw 3\\nSkipping line 10326: expected 2 fields, saw 3\\nSkipping line 10361: expected 2 fields, saw 17\\nSkipping line 10365: expected 2 fields, saw 11\\nSkipping line 10391: expected 2 fields, saw 4\\nSkipping line 10405: expected 2 fields, saw 3\\nSkipping line 10433: expected 2 fields, saw 3\\nSkipping line 10436: expected 2 fields, saw 4\\nSkipping line 10504: expected 2 fields, saw 56\\nSkipping line 10505: expected 2 fields, saw 5\\nSkipping line 10529: expected 2 fields, saw 4\\nSkipping line 10571: expected 2 fields, saw 3\\nSkipping line 10572: expected 2 fields, saw 3\\nSkipping line 10573: expected 2 fields, saw 4\\nSkipping line 10576: expected 2 fields, saw 4\\nSkipping line 10592: expected 2 fields, saw 3\\nSkipping line 10624: expected 2 fields, saw 3\\nSkipping line 10628: expected 2 fields, saw 6\\nSkipping line 10632: expected 2 fields, saw 3\\nSkipping line 10636: expected 2 fields, saw 3\\nSkipping line 10638: expected 2 fields, saw 15\\nSkipping line 10639: expected 2 fields, saw 3\\nSkipping line 10645: expected 2 fields, saw 4\\nSkipping line 10680: expected 2 fields, saw 3\\nSkipping line 10700: expected 2 fields, saw 5\\nSkipping line 10713: expected 2 fields, saw 4\\nSkipping line 10719: expected 2 fields, saw 4\\nSkipping line 10720: expected 2 fields, saw 3\\nSkipping line 10721: expected 2 fields, saw 3\\nSkipping line 10733: expected 2 fields, saw 3\\nSkipping line 10737: expected 2 fields, saw 34\\nSkipping line 10749: expected 2 fields, saw 3\\nSkipping line 10776: expected 2 fields, saw 4\\nSkipping line 10777: expected 2 fields, saw 3\\nSkipping line 10782: expected 2 fields, saw 3\\nSkipping line 10786: expected 2 fields, saw 8\\nSkipping line 10808: expected 2 fields, saw 4\\nSkipping line 10883: expected 2 fields, saw 3\\nSkipping line 10895: expected 2 fields, saw 8\\nSkipping line 10921: expected 2 fields, saw 3\\nSkipping line 10939: expected 2 fields, saw 3\\nSkipping line 11010: expected 2 fields, saw 3\\nSkipping line 11073: expected 2 fields, saw 3\\nSkipping line 11079: expected 2 fields, saw 3\\nSkipping line 11103: expected 2 fields, saw 5\\nSkipping line 11138: expected 2 fields, saw 4\\nSkipping line 11159: expected 2 fields, saw 3\\nSkipping line 11166: expected 2 fields, saw 3\\nSkipping line 11207: expected 2 fields, saw 3\\nSkipping line 11208: expected 2 fields, saw 3\\nSkipping line 11214: expected 2 fields, saw 3\\nSkipping line 11222: expected 2 fields, saw 3\\nSkipping line 11260: expected 2 fields, saw 12\\nSkipping line 11265: expected 2 fields, saw 5\\nSkipping line 11269: expected 2 fields, saw 3\\nSkipping line 11312: expected 2 fields, saw 3\\nSkipping line 11315: expected 2 fields, saw 3\\nSkipping line 11362: expected 2 fields, saw 12\\nSkipping line 11378: expected 2 fields, saw 4\\nSkipping line 11423: expected 2 fields, saw 3\\nSkipping line 11453: expected 2 fields, saw 3\\nSkipping line 11476: expected 2 fields, saw 3\\nSkipping line 11479: expected 2 fields, saw 19\\nSkipping line 11485: expected 2 fields, saw 4\\nSkipping line 11490: expected 2 fields, saw 3\\nSkipping line 11498: expected 2 fields, saw 3\\nSkipping line 11591: expected 2 fields, saw 3\\nSkipping line 11629: expected 2 fields, saw 4\\nSkipping line 11643: expected 2 fields, saw 3\\nSkipping line 11661: expected 2 fields, saw 4\\nSkipping line 11689: expected 2 fields, saw 3\\nSkipping line 11695: expected 2 fields, saw 3\\nSkipping line 11777: expected 2 fields, saw 3\\nSkipping line 11793: expected 2 fields, saw 4\\nSkipping line 11810: expected 2 fields, saw 3\\nSkipping line 11886: expected 2 fields, saw 3\\nSkipping line 11895: expected 2 fields, saw 3\\nSkipping line 11899: expected 2 fields, saw 10\\nSkipping line 11911: expected 2 fields, saw 3\\nSkipping line 11963: expected 2 fields, saw 3\\nSkipping line 11967: expected 2 fields, saw 4\\nSkipping line 11975: expected 2 fields, saw 10\\nSkipping line 12023: expected 2 fields, saw 3\\nSkipping line 12088: expected 2 fields, saw 3\\nSkipping line 12101: expected 2 fields, saw 6\\nSkipping line 12106: expected 2 fields, saw 3\\nSkipping line 12158: expected 2 fields, saw 6\\nSkipping line 12190: expected 2 fields, saw 6\\nSkipping line 12201: expected 2 fields, saw 3\\nSkipping line 12219: expected 2 fields, saw 8\\nSkipping line 12305: expected 2 fields, saw 3\\nSkipping line 12323: expected 2 fields, saw 5\\nSkipping line 12330: expected 2 fields, saw 3\\nSkipping line 12336: expected 2 fields, saw 3\\nSkipping line 12339: expected 2 fields, saw 3\\nSkipping line 12366: expected 2 fields, saw 6\\nSkipping line 12367: expected 2 fields, saw 5\\nSkipping line 12407: expected 2 fields, saw 3\\nSkipping line 12418: expected 2 fields, saw 3\\nSkipping line 12435: expected 2 fields, saw 3\\nSkipping line 12464: expected 2 fields, saw 7\\nSkipping line 12474: expected 2 fields, saw 3\\nSkipping line 12485: expected 2 fields, saw 3\\nSkipping line 12492: expected 2 fields, saw 6\\nSkipping line 12510: expected 2 fields, saw 4\\nSkipping line 12513: expected 2 fields, saw 12\\nSkipping line 12522: expected 2 fields, saw 3\\nSkipping line 12548: expected 2 fields, saw 3\\nSkipping line 12587: expected 2 fields, saw 3\\nSkipping line 12595: expected 2 fields, saw 3\\nSkipping line 12617: expected 2 fields, saw 3\\nSkipping line 12618: expected 2 fields, saw 3\\nSkipping line 12623: expected 2 fields, saw 9\\nSkipping line 12636: expected 2 fields, saw 14\\nSkipping line 12655: expected 2 fields, saw 3\\nSkipping line 12659: expected 2 fields, saw 4\\nSkipping line 12691: expected 2 fields, saw 11\\nSkipping line 12692: expected 2 fields, saw 5\\nSkipping line 12700: expected 2 fields, saw 3\\nSkipping line 12750: expected 2 fields, saw 4\\nSkipping line 12767: expected 2 fields, saw 3\\nSkipping line 12768: expected 2 fields, saw 4\\nSkipping line 12779: expected 2 fields, saw 5\\nSkipping line 12784: expected 2 fields, saw 7\\nSkipping line 12817: expected 2 fields, saw 4\\nSkipping line 12821: expected 2 fields, saw 3\\nSkipping line 12832: expected 2 fields, saw 3\\nSkipping line 12850: expected 2 fields, saw 4\\nSkipping line 12883: expected 2 fields, saw 4\\nSkipping line 12884: expected 2 fields, saw 3\\nSkipping line 12885: expected 2 fields, saw 3\\nSkipping line 12891: expected 2 fields, saw 7\\nSkipping line 12901: expected 2 fields, saw 4\\nSkipping line 12956: expected 2 fields, saw 3\\nSkipping line 12957: expected 2 fields, saw 4\\nSkipping line 12959: expected 2 fields, saw 3\\nSkipping line 12963: expected 2 fields, saw 3\\nSkipping line 13000: expected 2 fields, saw 5\\nSkipping line 13012: expected 2 fields, saw 3\\nSkipping line 13023: expected 2 fields, saw 3\\nSkipping line 13027: expected 2 fields, saw 4\\nSkipping line 13028: expected 2 fields, saw 3\\nSkipping line 13040: expected 2 fields, saw 3\\nSkipping line 13064: expected 2 fields, saw 3\\nSkipping line 13070: expected 2 fields, saw 3\\nSkipping line 13076: expected 2 fields, saw 5\\nSkipping line 13090: expected 2 fields, saw 4\\nSkipping line 13107: expected 2 fields, saw 3\\nSkipping line 13115: expected 2 fields, saw 8\\nSkipping line 13127: expected 2 fields, saw 4\\nSkipping line 13153: expected 2 fields, saw 3\\nSkipping line 13168: expected 2 fields, saw 3\\nSkipping line 13173: expected 2 fields, saw 4\\nSkipping line 13185: expected 2 fields, saw 4\\nSkipping line 13232: expected 2 fields, saw 3\\nSkipping line 13238: expected 2 fields, saw 3\\nSkipping line 13245: expected 2 fields, saw 3\\nSkipping line 13276: expected 2 fields, saw 4\\nSkipping line 13278: expected 2 fields, saw 4\\nSkipping line 13326: expected 2 fields, saw 4\\nSkipping line 13349: expected 2 fields, saw 9\\nSkipping line 13426: expected 2 fields, saw 3\\nSkipping line 13448: expected 2 fields, saw 5\\nSkipping line 13466: expected 2 fields, saw 4\\nSkipping line 13470: expected 2 fields, saw 3\\nSkipping line 13482: expected 2 fields, saw 4\\nSkipping line 13532: expected 2 fields, saw 3\\nSkipping line 13541: expected 2 fields, saw 3\\nSkipping line 13579: expected 2 fields, saw 3\\nSkipping line 13594: expected 2 fields, saw 3\\nSkipping line 13598: expected 2 fields, saw 3\\nSkipping line 13616: expected 2 fields, saw 3\\nSkipping line 13618: expected 2 fields, saw 3\\nSkipping line 13623: expected 2 fields, saw 3\\nSkipping line 13643: expected 2 fields, saw 3\\nSkipping line 13660: expected 2 fields, saw 3\\nSkipping line 13667: expected 2 fields, saw 4\\nSkipping line 13672: expected 2 fields, saw 3\\nSkipping line 13702: expected 2 fields, saw 3\\nSkipping line 13727: expected 2 fields, saw 3\\nSkipping line 13739: expected 2 fields, saw 10\\nSkipping line 13762: expected 2 fields, saw 3\\nSkipping line 13768: expected 2 fields, saw 3\\nSkipping line 13772: expected 2 fields, saw 3\\nSkipping line 13839: expected 2 fields, saw 3\\nSkipping line 13891: expected 2 fields, saw 3\\nSkipping line 13901: expected 2 fields, saw 26\\nSkipping line 13924: expected 2 fields, saw 3\\nSkipping line 13952: expected 2 fields, saw 3\\nSkipping line 13954: expected 2 fields, saw 3\\nSkipping line 13999: expected 2 fields, saw 6\\nSkipping line 14029: expected 2 fields, saw 3\\nSkipping line 14039: expected 2 fields, saw 3\\nSkipping line 14047: expected 2 fields, saw 3\\nSkipping line 14088: expected 2 fields, saw 4\\nSkipping line 14099: expected 2 fields, saw 3\\nSkipping line 14119: expected 2 fields, saw 3\\nSkipping line 14135: expected 2 fields, saw 3\\nSkipping line 14144: expected 2 fields, saw 4\\nSkipping line 14181: expected 2 fields, saw 3\\nSkipping line 14186: expected 2 fields, saw 8\\nSkipping line 14189: expected 2 fields, saw 9\\nSkipping line 14190: expected 2 fields, saw 3\\nSkipping line 14192: expected 2 fields, saw 3\\nSkipping line 14219: expected 2 fields, saw 4\\nSkipping line 14220: expected 2 fields, saw 3\\nSkipping line 14224: expected 2 fields, saw 3\\nSkipping line 14268: expected 2 fields, saw 3\\nSkipping line 14274: expected 2 fields, saw 6\\nSkipping line 14285: expected 2 fields, saw 3\\nSkipping line 14292: expected 2 fields, saw 3\\nSkipping line 14301: expected 2 fields, saw 4\\nSkipping line 14303: expected 2 fields, saw 3\\nSkipping line 14317: expected 2 fields, saw 3\\nSkipping line 14328: expected 2 fields, saw 6\\nSkipping line 14362: expected 2 fields, saw 3\\nSkipping line 14369: expected 2 fields, saw 10\\nSkipping line 14374: expected 2 fields, saw 4\\nSkipping line 14392: expected 2 fields, saw 3\\nSkipping line 14433: expected 2 fields, saw 3\\nSkipping line 14448: expected 2 fields, saw 3\\nSkipping line 14468: expected 2 fields, saw 3\\nSkipping line 14485: expected 2 fields, saw 4\\nSkipping line 14509: expected 2 fields, saw 4\\nSkipping line 14569: expected 2 fields, saw 3\\nSkipping line 14570: expected 2 fields, saw 3\\nSkipping line 14574: expected 2 fields, saw 8\\nSkipping line 14597: expected 2 fields, saw 4\\nSkipping line 14614: expected 2 fields, saw 4\\nSkipping line 14624: expected 2 fields, saw 3\\nSkipping line 14627: expected 2 fields, saw 3\\nSkipping line 14645: expected 2 fields, saw 3\\nSkipping line 14654: expected 2 fields, saw 3\\nSkipping line 14664: expected 2 fields, saw 3\\nSkipping line 14678: expected 2 fields, saw 3\\nSkipping line 14685: expected 2 fields, saw 3\\nSkipping line 14700: expected 2 fields, saw 3\\nSkipping line 14712: expected 2 fields, saw 3\\nSkipping line 14718: expected 2 fields, saw 8\\nSkipping line 14739: expected 2 fields, saw 3\\nSkipping line 14776: expected 2 fields, saw 3\\nSkipping line 14810: expected 2 fields, saw 4\\nSkipping line 14831: expected 2 fields, saw 4\\nSkipping line 14852: expected 2 fields, saw 3\\nSkipping line 14874: expected 2 fields, saw 3\\nSkipping line 14879: expected 2 fields, saw 6\\nSkipping line 14902: expected 2 fields, saw 3\\nSkipping line 14940: expected 2 fields, saw 3\\nSkipping line 14972: expected 2 fields, saw 4\\nSkipping line 14993: expected 2 fields, saw 4\\nSkipping line 14995: expected 2 fields, saw 4\\nSkipping line 15055: expected 2 fields, saw 3\\nSkipping line 15056: expected 2 fields, saw 3\\nSkipping line 15171: expected 2 fields, saw 4\\nSkipping line 15184: expected 2 fields, saw 3\\nSkipping line 15192: expected 2 fields, saw 3\\nSkipping line 15206: expected 2 fields, saw 14\\nSkipping line 15214: expected 2 fields, saw 3\\nSkipping line 15247: expected 2 fields, saw 3\\nSkipping line 15263: expected 2 fields, saw 3\\nSkipping line 15266: expected 2 fields, saw 3\\nSkipping line 15269: expected 2 fields, saw 10\\nSkipping line 15304: expected 2 fields, saw 3\\nSkipping line 15306: expected 2 fields, saw 3\\nSkipping line 15327: expected 2 fields, saw 7\\nSkipping line 15353: expected 2 fields, saw 6\\nSkipping line 15358: expected 2 fields, saw 9\\nSkipping line 15378: expected 2 fields, saw 3\\nSkipping line 15387: expected 2 fields, saw 3\\nSkipping line 15409: expected 2 fields, saw 4\\nSkipping line 15411: expected 2 fields, saw 3\\nSkipping line 15432: expected 2 fields, saw 3\\nSkipping line 15448: expected 2 fields, saw 34\\nSkipping line 15476: expected 2 fields, saw 3\\nSkipping line 15517: expected 2 fields, saw 6\\nSkipping line 15554: expected 2 fields, saw 3\\nSkipping line 15580: expected 2 fields, saw 5\\nSkipping line 15591: expected 2 fields, saw 3\\nSkipping line 15602: expected 2 fields, saw 9\\nSkipping line 15604: expected 2 fields, saw 3\\nSkipping line 15610: expected 2 fields, saw 3\\nSkipping line 15619: expected 2 fields, saw 4\\nSkipping line 15640: expected 2 fields, saw 3\\nSkipping line 15650: expected 2 fields, saw 21\\nSkipping line 15677: expected 2 fields, saw 7\\nSkipping line 15686: expected 2 fields, saw 3\\nSkipping line 15688: expected 2 fields, saw 34\\nSkipping line 15697: expected 2 fields, saw 3\\nSkipping line 15723: expected 2 fields, saw 5\\nSkipping line 15724: expected 2 fields, saw 4\\nSkipping line 15787: expected 2 fields, saw 3\\nSkipping line 15842: expected 2 fields, saw 3\\nSkipping line 15879: expected 2 fields, saw 4\\nSkipping line 15889: expected 2 fields, saw 3\\nSkipping line 15902: expected 2 fields, saw 7\\nSkipping line 15981: expected 2 fields, saw 8\\nSkipping line 15991: expected 2 fields, saw 4\\nSkipping line 16000: expected 2 fields, saw 5\\nSkipping line 16031: expected 2 fields, saw 8\\nSkipping line 16037: expected 2 fields, saw 3\\nSkipping line 16038: expected 2 fields, saw 3\\nSkipping line 16063: expected 2 fields, saw 4\\nSkipping line 16074: expected 2 fields, saw 3\\nSkipping line 16113: expected 2 fields, saw 3\\nSkipping line 16133: expected 2 fields, saw 4\\nSkipping line 16150: expected 2 fields, saw 3\\nSkipping line 16172: expected 2 fields, saw 22\\nSkipping line 16174: expected 2 fields, saw 10\\nSkipping line 16189: expected 2 fields, saw 5\\nSkipping line 16209: expected 2 fields, saw 10\\nSkipping line 16237: expected 2 fields, saw 4\\nSkipping line 16242: expected 2 fields, saw 3\\nSkipping line 16259: expected 2 fields, saw 4\\nSkipping line 16267: expected 2 fields, saw 4\\nSkipping line 16283: expected 2 fields, saw 3\\nSkipping line 16299: expected 2 fields, saw 4\\nSkipping line 16300: expected 2 fields, saw 6\\nSkipping line 16330: expected 2 fields, saw 3\\nSkipping line 16335: expected 2 fields, saw 4\\nSkipping line 16419: expected 2 fields, saw 3\\nSkipping line 16453: expected 2 fields, saw 5\\nSkipping line 16454: expected 2 fields, saw 3\\nSkipping line 16458: expected 2 fields, saw 4\\nSkipping line 16464: expected 2 fields, saw 4\\nSkipping line 16468: expected 2 fields, saw 3\\nSkipping line 16473: expected 2 fields, saw 3\\nSkipping line 16531: expected 2 fields, saw 20\\nSkipping line 16534: expected 2 fields, saw 7\\nSkipping line 16551: expected 2 fields, saw 4\\nSkipping line 16552: expected 2 fields, saw 6\\nSkipping line 16559: expected 2 fields, saw 3\\nSkipping line 16575: expected 2 fields, saw 4\\nSkipping line 16616: expected 2 fields, saw 10\\nSkipping line 16649: expected 2 fields, saw 3\\nSkipping line 16655: expected 2 fields, saw 3\\nSkipping line 16662: expected 2 fields, saw 3\\nSkipping line 16665: expected 2 fields, saw 3\\nSkipping line 16706: expected 2 fields, saw 3\\nSkipping line 16711: expected 2 fields, saw 3\\nSkipping line 16718: expected 2 fields, saw 3\\nSkipping line 16727: expected 2 fields, saw 3\\nSkipping line 16733: expected 2 fields, saw 3\\nSkipping line 16735: expected 2 fields, saw 4\\nSkipping line 16740: expected 2 fields, saw 6\\nSkipping line 16766: expected 2 fields, saw 9\\nSkipping line 16804: expected 2 fields, saw 3\\nSkipping line 16829: expected 2 fields, saw 8\\nSkipping line 16848: expected 2 fields, saw 5\\nSkipping line 16871: expected 2 fields, saw 3\\nSkipping line 16876: expected 2 fields, saw 6\\nSkipping line 16953: expected 2 fields, saw 3\\nSkipping line 16978: expected 2 fields, saw 3\\nSkipping line 16995: expected 2 fields, saw 3\\nSkipping line 17007: expected 2 fields, saw 6\\nSkipping line 17012: expected 2 fields, saw 3\\nSkipping line 17065: expected 2 fields, saw 3\\nSkipping line 17071: expected 2 fields, saw 3\\nSkipping line 17095: expected 2 fields, saw 3\\nSkipping line 17099: expected 2 fields, saw 3\\nSkipping line 17111: expected 2 fields, saw 5\\nSkipping line 17114: expected 2 fields, saw 3\\nSkipping line 17146: expected 2 fields, saw 3\\nSkipping line 17169: expected 2 fields, saw 3\\nSkipping line 17180: expected 2 fields, saw 3\\nSkipping line 17183: expected 2 fields, saw 9\\nSkipping line 17188: expected 2 fields, saw 6\\nSkipping line 17244: expected 2 fields, saw 14\\nSkipping line 17250: expected 2 fields, saw 4\\nSkipping line 17286: expected 2 fields, saw 4\\nSkipping line 17289: expected 2 fields, saw 14\\nSkipping line 17314: expected 2 fields, saw 3\\nSkipping line 17337: expected 2 fields, saw 3\\nSkipping line 17351: expected 2 fields, saw 4\\nSkipping line 17360: expected 2 fields, saw 3\\nSkipping line 17374: expected 2 fields, saw 3\\nSkipping line 17383: expected 2 fields, saw 3\\nSkipping line 17413: expected 2 fields, saw 4\\nSkipping line 17419: expected 2 fields, saw 33\\nSkipping line 17422: expected 2 fields, saw 3\\nSkipping line 17432: expected 2 fields, saw 3\\nSkipping line 17442: expected 2 fields, saw 3\\nSkipping line 17474: expected 2 fields, saw 3\\nSkipping line 17492: expected 2 fields, saw 11\\nSkipping line 17501: expected 2 fields, saw 4\\nSkipping line 17528: expected 2 fields, saw 3\\nSkipping line 17586: expected 2 fields, saw 4\\nSkipping line 17610: expected 2 fields, saw 3\\nSkipping line 17630: expected 2 fields, saw 10\\nSkipping line 17661: expected 2 fields, saw 4\\nSkipping line 17695: expected 2 fields, saw 3\\nSkipping line 17739: expected 2 fields, saw 17\\nSkipping line 17744: expected 2 fields, saw 4\\nSkipping line 17750: expected 2 fields, saw 8\\nSkipping line 17765: expected 2 fields, saw 3\\nSkipping line 17779: expected 2 fields, saw 12\\nSkipping line 17786: expected 2 fields, saw 5\\nSkipping line 17788: expected 2 fields, saw 3\\nSkipping line 17830: expected 2 fields, saw 8\\nSkipping line 17832: expected 2 fields, saw 4\\nSkipping line 17854: expected 2 fields, saw 3\\nSkipping line 17919: expected 2 fields, saw 3\\nSkipping line 17988: expected 2 fields, saw 5\\nSkipping line 18008: expected 2 fields, saw 5\\nSkipping line 18033: expected 2 fields, saw 3\\nSkipping line 18061: expected 2 fields, saw 3\\nSkipping line 18065: expected 2 fields, saw 3\\nSkipping line 18072: expected 2 fields, saw 3\\nSkipping line 18081: expected 2 fields, saw 18\\nSkipping line 18096: expected 2 fields, saw 4\\nSkipping line 18117: expected 2 fields, saw 3\\nSkipping line 18136: expected 2 fields, saw 3\\nSkipping line 18137: expected 2 fields, saw 4\\nSkipping line 18145: expected 2 fields, saw 5\\nSkipping line 18158: expected 2 fields, saw 9\\nSkipping line 18175: expected 2 fields, saw 3\\nSkipping line 18183: expected 2 fields, saw 3\\nSkipping line 18191: expected 2 fields, saw 4\\nSkipping line 18203: expected 2 fields, saw 4\\nSkipping line 18217: expected 2 fields, saw 5\\nSkipping line 18219: expected 2 fields, saw 4\\nSkipping line 18299: expected 2 fields, saw 3\\nSkipping line 18307: expected 2 fields, saw 5\\nSkipping line 18325: expected 2 fields, saw 4\\nSkipping line 18328: expected 2 fields, saw 3\\nSkipping line 18333: expected 2 fields, saw 3\\nSkipping line 18369: expected 2 fields, saw 3\\nSkipping line 18370: expected 2 fields, saw 4\\nSkipping line 18379: expected 2 fields, saw 4\\nSkipping line 18430: expected 2 fields, saw 3\\nSkipping line 18462: expected 2 fields, saw 3\\nSkipping line 18581: expected 2 fields, saw 14\\nSkipping line 18600: expected 2 fields, saw 3\\nSkipping line 18604: expected 2 fields, saw 5\\nSkipping line 18605: expected 2 fields, saw 3\\nSkipping line 18607: expected 2 fields, saw 3\\nSkipping line 18673: expected 2 fields, saw 13\\nSkipping line 18689: expected 2 fields, saw 3\\nSkipping line 18695: expected 2 fields, saw 3\\nSkipping line 18711: expected 2 fields, saw 5\\nSkipping line 18735: expected 2 fields, saw 4\\nSkipping line 18757: expected 2 fields, saw 9\\nSkipping line 18763: expected 2 fields, saw 9\\nSkipping line 18770: expected 2 fields, saw 3\\nSkipping line 18773: expected 2 fields, saw 3\\nSkipping line 18826: expected 2 fields, saw 5\\nSkipping line 18853: expected 2 fields, saw 3\\nSkipping line 18854: expected 2 fields, saw 25\\nSkipping line 18875: expected 2 fields, saw 4\\nSkipping line 18876: expected 2 fields, saw 3\\nSkipping line 18886: expected 2 fields, saw 13\\nSkipping line 18897: expected 2 fields, saw 3\\nSkipping line 18937: expected 2 fields, saw 3\\nSkipping line 18947: expected 2 fields, saw 4\\nSkipping line 18971: expected 2 fields, saw 3\\nSkipping line 18983: expected 2 fields, saw 3\\nSkipping line 18998: expected 2 fields, saw 4\\nSkipping line 19002: expected 2 fields, saw 6\\nSkipping line 19003: expected 2 fields, saw 6\\nSkipping line 19005: expected 2 fields, saw 3\\nSkipping line 19013: expected 2 fields, saw 3\\nSkipping line 19019: expected 2 fields, saw 3\\nSkipping line 19022: expected 2 fields, saw 3\\nSkipping line 19027: expected 2 fields, saw 3\\nSkipping line 19069: expected 2 fields, saw 4\\nSkipping line 19077: expected 2 fields, saw 3\\nSkipping line 19150: expected 2 fields, saw 10\\nSkipping line 19170: expected 2 fields, saw 3\\nSkipping line 19188: expected 2 fields, saw 3\\nSkipping line 19249: expected 2 fields, saw 4\\nSkipping line 19263: expected 2 fields, saw 3\\nSkipping line 19303: expected 2 fields, saw 3\\nSkipping line 19308: expected 2 fields, saw 3\\nSkipping line 19311: expected 2 fields, saw 3\\nSkipping line 19313: expected 2 fields, saw 4\\nSkipping line 19333: expected 2 fields, saw 6\\nSkipping line 19374: expected 2 fields, saw 8\\nSkipping line 19383: expected 2 fields, saw 3\\nSkipping line 19385: expected 2 fields, saw 3\\nSkipping line 19387: expected 2 fields, saw 4\\nSkipping line 19403: expected 2 fields, saw 3\\nSkipping line 19409: expected 2 fields, saw 3\\nSkipping line 19438: expected 2 fields, saw 5\\nSkipping line 19446: expected 2 fields, saw 4\\nSkipping line 19454: expected 2 fields, saw 3\\nSkipping line 19456: expected 2 fields, saw 3\\nSkipping line 19464: expected 2 fields, saw 3\\nSkipping line 19487: expected 2 fields, saw 3\\nSkipping line 19493: expected 2 fields, saw 3\\nSkipping line 19508: expected 2 fields, saw 4\\nSkipping line 19509: expected 2 fields, saw 11\\nSkipping line 19513: expected 2 fields, saw 3\\nSkipping line 19517: expected 2 fields, saw 3\\nSkipping line 19529: expected 2 fields, saw 3\\nSkipping line 19532: expected 2 fields, saw 9\\nSkipping line 19551: expected 2 fields, saw 3\\nSkipping line 19556: expected 2 fields, saw 4\\nSkipping line 19564: expected 2 fields, saw 5\\nSkipping line 19565: expected 2 fields, saw 3\\nSkipping line 19579: expected 2 fields, saw 5\\nSkipping line 19603: expected 2 fields, saw 3\\nSkipping line 19612: expected 2 fields, saw 4\\nSkipping line 19648: expected 2 fields, saw 12\\nSkipping line 19651: expected 2 fields, saw 7\\nSkipping line 19652: expected 2 fields, saw 4\\nSkipping line 19656: expected 2 fields, saw 3\\nSkipping line 19734: expected 2 fields, saw 5\\nSkipping line 19738: expected 2 fields, saw 10\\nSkipping line 19744: expected 2 fields, saw 3\\nSkipping line 19746: expected 2 fields, saw 3\\nSkipping line 19752: expected 2 fields, saw 4\\nSkipping line 19792: expected 2 fields, saw 3\\nSkipping line 19831: expected 2 fields, saw 3\\nSkipping line 19844: expected 2 fields, saw 3\\nSkipping line 19850: expected 2 fields, saw 4\\nSkipping line 19886: expected 2 fields, saw 6\\nSkipping line 19892: expected 2 fields, saw 3\\nSkipping line 19912: expected 2 fields, saw 5\\nSkipping line 19944: expected 2 fields, saw 3\\nSkipping line 19955: expected 2 fields, saw 4\\nSkipping line 19968: expected 2 fields, saw 4\\nSkipping line 19970: expected 2 fields, saw 8\\nSkipping line 19971: expected 2 fields, saw 3\\nSkipping line 19972: expected 2 fields, saw 9\\nSkipping line 19975: expected 2 fields, saw 8\\nSkipping line 19981: expected 2 fields, saw 4\\nSkipping line 19988: expected 2 fields, saw 3\\nSkipping line 20007: expected 2 fields, saw 3\\nSkipping line 20013: expected 2 fields, saw 3\\nSkipping line 20018: expected 2 fields, saw 3\\nSkipping line 20025: expected 2 fields, saw 3\\nSkipping line 20029: expected 2 fields, saw 3\\nSkipping line 20040: expected 2 fields, saw 3\\nSkipping line 20059: expected 2 fields, saw 3\\nSkipping line 20067: expected 2 fields, saw 3\\nSkipping line 20079: expected 2 fields, saw 12\\nSkipping line 20086: expected 2 fields, saw 3\\nSkipping line 20088: expected 2 fields, saw 3\\nSkipping line 20093: expected 2 fields, saw 7\\nSkipping line 20102: expected 2 fields, saw 3\\nSkipping line 20148: expected 2 fields, saw 27\\nSkipping line 20179: expected 2 fields, saw 3\\nSkipping line 20185: expected 2 fields, saw 8\\nSkipping line 20191: expected 2 fields, saw 13\\nSkipping line 20215: expected 2 fields, saw 4\\nSkipping line 20237: expected 2 fields, saw 4\\nSkipping line 20271: expected 2 fields, saw 3\\nSkipping line 20273: expected 2 fields, saw 3\\nSkipping line 20286: expected 2 fields, saw 3\\nSkipping line 20312: expected 2 fields, saw 3\\nSkipping line 20329: expected 2 fields, saw 5\\nSkipping line 20356: expected 2 fields, saw 3\\nSkipping line 20362: expected 2 fields, saw 5\\nSkipping line 20373: expected 2 fields, saw 3\\nSkipping line 20384: expected 2 fields, saw 3\\nSkipping line 20425: expected 2 fields, saw 33\\nSkipping line 20453: expected 2 fields, saw 3\\nSkipping line 20514: expected 2 fields, saw 4\\nSkipping line 20552: expected 2 fields, saw 7\\nSkipping line 20560: expected 2 fields, saw 3\\nSkipping line 20570: expected 2 fields, saw 5\\nSkipping line 20600: expected 2 fields, saw 3\\nSkipping line 20611: expected 2 fields, saw 3\\nSkipping line 20614: expected 2 fields, saw 3\\nSkipping line 20616: expected 2 fields, saw 3\\nSkipping line 20678: expected 2 fields, saw 19\\nSkipping line 20681: expected 2 fields, saw 3\\nSkipping line 20710: expected 2 fields, saw 3\\nSkipping line 20713: expected 2 fields, saw 4\\nSkipping line 20719: expected 2 fields, saw 3\\nSkipping line 20735: expected 2 fields, saw 3\\nSkipping line 20737: expected 2 fields, saw 4\\nSkipping line 20768: expected 2 fields, saw 5\\nSkipping line 20806: expected 2 fields, saw 3\\nSkipping line 20816: expected 2 fields, saw 3\\nSkipping line 20839: expected 2 fields, saw 3\\nSkipping line 20846: expected 2 fields, saw 4\\nSkipping line 20876: expected 2 fields, saw 4\\nSkipping line 20886: expected 2 fields, saw 3\\nSkipping line 20904: expected 2 fields, saw 20\\nSkipping line 20960: expected 2 fields, saw 5\\nSkipping line 20986: expected 2 fields, saw 3\\nSkipping line 21009: expected 2 fields, saw 3\\nSkipping line 21012: expected 2 fields, saw 4\\nSkipping line 21039: expected 2 fields, saw 3\\nSkipping line 21043: expected 2 fields, saw 5\\nSkipping line 21067: expected 2 fields, saw 10\\nSkipping line 21083: expected 2 fields, saw 6\\nSkipping line 21100: expected 2 fields, saw 3\\nSkipping line 21110: expected 2 fields, saw 16\\nSkipping line 21111: expected 2 fields, saw 6\\nSkipping line 21133: expected 2 fields, saw 18\\nSkipping line 21147: expected 2 fields, saw 3\\nSkipping line 21154: expected 2 fields, saw 3\\nSkipping line 21156: expected 2 fields, saw 6\\nSkipping line 21158: expected 2 fields, saw 3\\nSkipping line 21167: expected 2 fields, saw 9\\nSkipping line 21187: expected 2 fields, saw 3\\nSkipping line 21199: expected 2 fields, saw 3\\nSkipping line 21214: expected 2 fields, saw 3\\nSkipping line 21218: expected 2 fields, saw 5\\nSkipping line 21220: expected 2 fields, saw 3\\nSkipping line 21248: expected 2 fields, saw 28\\nSkipping line 21264: expected 2 fields, saw 3\\nSkipping line 21270: expected 2 fields, saw 3\\nSkipping line 21278: expected 2 fields, saw 3\\nSkipping line 21280: expected 2 fields, saw 3\\nSkipping line 21281: expected 2 fields, saw 3\\nSkipping line 21301: expected 2 fields, saw 3\\nSkipping line 21322: expected 2 fields, saw 6\\nSkipping line 21327: expected 2 fields, saw 6\\nSkipping line 21345: expected 2 fields, saw 3\\nSkipping line 21347: expected 2 fields, saw 3\\nSkipping line 21353: expected 2 fields, saw 4\\nSkipping line 21363: expected 2 fields, saw 4\\nSkipping line 21369: expected 2 fields, saw 3\\nSkipping line 21387: expected 2 fields, saw 4\\nSkipping line 21393: expected 2 fields, saw 5\\nSkipping line 21400: expected 2 fields, saw 5\\nSkipping line 21412: expected 2 fields, saw 3\\nSkipping line 21426: expected 2 fields, saw 3\\nSkipping line 21439: expected 2 fields, saw 3\\nSkipping line 21441: expected 2 fields, saw 3\\nSkipping line 21443: expected 2 fields, saw 3\\nSkipping line 21458: expected 2 fields, saw 5\\nSkipping line 21477: expected 2 fields, saw 6\\nSkipping line 21489: expected 2 fields, saw 11\\nSkipping line 21506: expected 2 fields, saw 4\\nSkipping line 21509: expected 2 fields, saw 3\\nSkipping line 21510: expected 2 fields, saw 28\\nSkipping line 21514: expected 2 fields, saw 3\\nSkipping line 21516: expected 2 fields, saw 3\\nSkipping line 21541: expected 2 fields, saw 6\\nSkipping line 21595: expected 2 fields, saw 6\\nSkipping line 21599: expected 2 fields, saw 3\\nSkipping line 21643: expected 2 fields, saw 3\\nSkipping line 21664: expected 2 fields, saw 3\\nSkipping line 21689: expected 2 fields, saw 7\\nSkipping line 21724: expected 2 fields, saw 4\\nSkipping line 21732: expected 2 fields, saw 3\\nSkipping line 21840: expected 2 fields, saw 6\\nSkipping line 21862: expected 2 fields, saw 8\\nSkipping line 21874: expected 2 fields, saw 4\\nSkipping line 21882: expected 2 fields, saw 3\\nSkipping line 21884: expected 2 fields, saw 3\\nSkipping line 21915: expected 2 fields, saw 3\\nSkipping line 21936: expected 2 fields, saw 3\\nSkipping line 21940: expected 2 fields, saw 3\\nSkipping line 21986: expected 2 fields, saw 4\\nSkipping line 21992: expected 2 fields, saw 3\\nSkipping line 21995: expected 2 fields, saw 3\\nSkipping line 22004: expected 2 fields, saw 3\\nSkipping line 22021: expected 2 fields, saw 3\\nSkipping line 22023: expected 2 fields, saw 5\\nSkipping line 22052: expected 2 fields, saw 8\\nSkipping line 22060: expected 2 fields, saw 5\\nSkipping line 22098: expected 2 fields, saw 3\\nSkipping line 22103: expected 2 fields, saw 6\\nSkipping line 22131: expected 2 fields, saw 3\\nSkipping line 22161: expected 2 fields, saw 3\\nSkipping line 22176: expected 2 fields, saw 5\\nSkipping line 22180: expected 2 fields, saw 5\\nSkipping line 22196: expected 2 fields, saw 6\\nSkipping line 22222: expected 2 fields, saw 10\\nSkipping line 22259: expected 2 fields, saw 17\\nSkipping line 22276: expected 2 fields, saw 3\\nSkipping line 22303: expected 2 fields, saw 11\\nSkipping line 22304: expected 2 fields, saw 3\\nSkipping line 22308: expected 2 fields, saw 26\\nSkipping line 22316: expected 2 fields, saw 3\\nSkipping line 22332: expected 2 fields, saw 4\\nSkipping line 22358: expected 2 fields, saw 3\\nSkipping line 22373: expected 2 fields, saw 3\\nSkipping line 22379: expected 2 fields, saw 13\\nSkipping line 22408: expected 2 fields, saw 3\\nSkipping line 22419: expected 2 fields, saw 3\\nSkipping line 22428: expected 2 fields, saw 3\\nSkipping line 22452: expected 2 fields, saw 3\\nSkipping line 22467: expected 2 fields, saw 4\\nSkipping line 22469: expected 2 fields, saw 5\\nSkipping line 22470: expected 2 fields, saw 24\\nSkipping line 22474: expected 2 fields, saw 3\\nSkipping line 22496: expected 2 fields, saw 3\\nSkipping line 22499: expected 2 fields, saw 18\\nSkipping line 22506: expected 2 fields, saw 4\\nSkipping line 22517: expected 2 fields, saw 4\\nSkipping line 22526: expected 2 fields, saw 3\\nSkipping line 22545: expected 2 fields, saw 3\\nSkipping line 22578: expected 2 fields, saw 4\\nSkipping line 22595: expected 2 fields, saw 3\\nSkipping line 22627: expected 2 fields, saw 3\\nSkipping line 22630: expected 2 fields, saw 8\\nSkipping line 22664: expected 2 fields, saw 9\\nSkipping line 22672: expected 2 fields, saw 3\\nSkipping line 22678: expected 2 fields, saw 3\\nSkipping line 22698: expected 2 fields, saw 5\\nSkipping line 22715: expected 2 fields, saw 3\\nSkipping line 22721: expected 2 fields, saw 3\\nSkipping line 22756: expected 2 fields, saw 11\\nSkipping line 22771: expected 2 fields, saw 3\\nSkipping line 22784: expected 2 fields, saw 7\\nSkipping line 22787: expected 2 fields, saw 3\\nSkipping line 22813: expected 2 fields, saw 5\\nSkipping line 22818: expected 2 fields, saw 4\\nSkipping line 22823: expected 2 fields, saw 3\\nSkipping line 22836: expected 2 fields, saw 3\\nSkipping line 22860: expected 2 fields, saw 4\\nSkipping line 22907: expected 2 fields, saw 4\\nSkipping line 22985: expected 2 fields, saw 3\\nSkipping line 22991: expected 2 fields, saw 3\\nSkipping line 22997: expected 2 fields, saw 5\\nSkipping line 22998: expected 2 fields, saw 9\\nSkipping line 23054: expected 2 fields, saw 3\\nSkipping line 23067: expected 2 fields, saw 11\\nSkipping line 23086: expected 2 fields, saw 3\\nSkipping line 23088: expected 2 fields, saw 9\\nSkipping line 23090: expected 2 fields, saw 3\\nSkipping line 23095: expected 2 fields, saw 3\\nSkipping line 23106: expected 2 fields, saw 3\\nSkipping line 23123: expected 2 fields, saw 3\\nSkipping line 23149: expected 2 fields, saw 3\\nSkipping line 23172: expected 2 fields, saw 3\\nSkipping line 23178: expected 2 fields, saw 3\\nSkipping line 23194: expected 2 fields, saw 3\\nSkipping line 23247: expected 2 fields, saw 5\\n'\n"
+     ]
+    }
+   ],
+   "source": [
+    "#пока пропускать плохие строчки, потом добавить и их обработку или лучше выгрузить данные с другим sep\n",
+    "test_df = pd.read_csv('test.csv', error_bad_lines=False)\n",
+    "train_df = pd.read_csv('train.csv', error_bad_lines=False)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 3,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>text</th>\n",
+       "      <th>label</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>ENT магнит</td>\n",
+       "      <td>0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>Сообщение от подписчиков Поступило сообщение о...</td>\n",
+       "      <td>-1</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>Курт Воннегут « Колыбель для кошки » Продолжаю...</td>\n",
+       "      <td>1</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>3</th>\n",
+       "      <td>Надо поугарать взять пакет из магнита и закупи...</td>\n",
+       "      <td>0</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>👌🏻☝🏻👏🏻👏🏻👏🏻 ширли-мырли-5.gif Кто все эти люди ...</td>\n",
+       "      <td>0</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "                                                text  label\n",
+       "0                                         ENT магнит      0\n",
+       "1  Сообщение от подписчиков Поступило сообщение о...     -1\n",
+       "2  Курт Воннегут « Колыбель для кошки » Продолжаю...      1\n",
+       "3  Надо поугарать взять пакет из магнита и закупи...      0\n",
+       "4  👌🏻☝🏻👏🏻👏🏻👏🏻 ширли-мырли-5.gif Кто все эти люди ...      0"
+      ]
+     },
+     "execution_count": 3,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "train_df.head()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "#### Смотрим распределение таргетов в трейне и тесте"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 4,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>label</th>\n",
+       "      <th>text</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>-1</td>\n",
+       "      <td>7446</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>0</td>\n",
+       "      <td>7334</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>1</td>\n",
+       "      <td>7175</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "   label  text\n",
+       "0     -1  7446\n",
+       "1      0  7334\n",
+       "2      1  7175"
+      ]
+     },
+     "execution_count": 4,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "temp_train = train_df.groupby('label').count()['text'].reset_index().sort_values(by='text',ascending=False)\n",
+    "temp_train"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 5,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>label</th>\n",
+       "      <th>text</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>1</th>\n",
+       "      <td>0</td>\n",
+       "      <td>3171</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>0</th>\n",
+       "      <td>-1</td>\n",
+       "      <td>3165</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>1</td>\n",
+       "      <td>3050</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "   label  text\n",
+       "1      0  3171\n",
+       "0     -1  3165\n",
+       "2      1  3050"
+      ]
+     },
+     "execution_count": 5,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "temp_test = test_df.groupby('label').count()['text'].reset_index().sort_values(by='text',ascending=False)\n",
+    "temp_test"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "#### Промечаем есть ли сущность в комментарии"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 6,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "train_df['exist_entity'] = [1 if 'ENT' in string else 0 for string in train_df['text']]\n",
+    "test_df['exist_entity'] = [1 if 'ENT' in string else 0 for string in test_df['text']]"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "#### Берём строки датафрейма с сущностями"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 7,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "train_df = train_df[train_df['exist_entity'] == 1]\n",
+    "train_df = test_df[test_df['exist_entity'] == 1]"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "#### Приводим к формату для сетки test & train"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 8,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "test_df['text_line'] = [string.replace('ENT', '$T$') for string in test_df['text']]\n",
+    "test_df['entity'] = 'ENT'\n",
+    "test_df['tp'] = 'test'\n",
+    "train_df['text_line'] = [string.replace('ENT', '$T$') for string in train_df['text']]\n",
+    "train_df['entity'] = 'ENT'\n",
+    "train_df['tp'] = 'train'"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 9,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#объединяем их для записи в файл нужного формата\n",
+    "df_all = pd.concat([train_df, test_df], axis=0, ignore_index=True)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "#### Типы данных правильные ставим"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 10,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "df_all['label'] = df_all['label'].astype(int)\n",
+    "df_all['text_line'] = df_all['text_line'].astype(str)"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "#### Находим максимальную длину предложения"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 11,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "11912"
+      ]
+     },
+     "execution_count": 11,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "df_all['len'] = [len(elem) for elem in df_all['text_line']]\n",
+    "df_all['len'].max()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "#### Обработка длинных предложений"
+   ]
+  },
+  {
+   "cell_type": "raw",
+   "metadata": {},
+   "source": [
+    "Используются эмбеддинги берта, а у него есть ограничение на максимальную длину предложения = 512,\n",
+    "поэтому предложения, длина которых > 512 будем обрабатывать следующим образом:\n",
+    "- обрезать строку длиной 512 так, что бы сущность была в центре или максимальная длина до 512,\n",
+    "- в дальнейшем можно делать скользящим окном по 512 и потом усреднять эмбеддинги и тд"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 12,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#строки до 512 оставляем как есть\n",
+    "df_all2 = df_all[df_all['len'] <= 512]\n",
+    "df_all2['short_line'] = df_all2['text_line'] "
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 80,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#отдельно выбираем длинные строки\n",
+    "df_part_preprocess = df_all[df_all['len'] > 512]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 14,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#делаем предобработку датафрейма с длинными строками\n",
+    "len_df = len(df_part_preprocess)\n",
+    "for ind, row in df_part_preprocess.iterrows():\n",
+    "    ind_ent = df_part_preprocess.loc[ind,'text_line'].find('$T$')\n",
+    "    start_value = 0 if ind_ent-255 < 0 else ind_ent-255\n",
+    "    max_sent_len = len(df_part_preprocess.loc[ind,'text_line'])\n",
+    "    end_value =  max_sent_len if ind_ent+255>max_sent_len else ind_ent+255\n",
+    "    df_part_preprocess.loc[ind,'short_line'] = df_part_preprocess.loc[ind,'text_line'][start_value:end_value]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 15,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "#объединяем длинные строки обработанные и \"нормальной длины\" строки(<=512 символов)\n",
+    "df_all3 = pd.concat([df_all2, df_part_preprocess], axis=0)[['short_line', 'entity', 'label','tp']]"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 16,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>short_line</th>\n",
+       "      <th>entity</th>\n",
+       "      <th>label</th>\n",
+       "      <th>tp</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>Москвича избили и порезали при попытке купить ...</td>\n",
+       "      <td>ENT</td>\n",
+       "      <td>-1</td>\n",
+       "      <td>train</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>id138736268|Анна тогда сделайте подарок себе с...</td>\n",
+       "      <td>ENT</td>\n",
+       "      <td>1</td>\n",
+       "      <td>train</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>5</th>\n",
+       "      <td>внимание ворует семечки в $T$</td>\n",
+       "      <td>ENT</td>\n",
+       "      <td>-1</td>\n",
+       "      <td>train</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>8</th>\n",
+       "      <td>Мясо Мираторг особенно радуют комменты с перво...</td>\n",
+       "      <td>ENT</td>\n",
+       "      <td>-1</td>\n",
+       "      <td>train</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>9</th>\n",
+       "      <td>У нас Дикси $T$ магнит спар это все рядом с домом</td>\n",
+       "      <td>ENT</td>\n",
+       "      <td>1</td>\n",
+       "      <td>train</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "                                          short_line entity  label     tp\n",
+       "2  Москвича избили и порезали при попытке купить ...    ENT     -1  train\n",
+       "4  id138736268|Анна тогда сделайте подарок себе с...    ENT      1  train\n",
+       "5                      внимание ворует семечки в $T$    ENT     -1  train\n",
+       "8  Мясо Мираторг особенно радуют комменты с перво...    ENT     -1  train\n",
+       "9  У нас Дикси $T$ магнит спар это все рядом с домом    ENT      1  train"
+      ]
+     },
+     "execution_count": 16,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "df_all3.head()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "#### Проверяем новую максимальную длину предложения"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 17,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "512"
+      ]
+     },
+     "execution_count": 17,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "df_all3['len2'] = [len(elem) for elem in df_all3['short_line']]\n",
+    "df_all3['len2'].max()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "#### Пишем train&test в файлы для формата модели"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "for tp in df_all3['tp'].unique():\n",
+    "    print(tp)\n",
+    "    filename = \"./ABSA-PyTorch/datasets/comments/\"+tp+\"_1.raw\" \n",
+    "    os.makedirs(os.path.dirname(filename), exist_ok=True)\n",
+    "    all_sent_df_per_tp = df_all3[df_all3['tp']==tp]\n",
+    "    with open(filename, \"a\") as f:\n",
+    "        for idx,row in all_sent_df_per_tp.iterrows():\n",
+    "            f.write(row['short_line']+'\\n'+row['entity']+'\\n'+str(row['label'])+'\\n')\n",
+    "        f.close()"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### 2. Train model"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "%%time\n",
+    "!python ./ABSA-PyTorch/train.py --model_name bert_spc --dataset own_dataset"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "~15hours"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "#### Сохраняем модель"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 81,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "torch.save(model, '/Users/dee/mfti_task_testing/final_model/model.bin')"
+   ]
+  },
+  {
+   "cell_type": "markdown",
+   "metadata": {},
+   "source": [
+    "### 3. Inference test"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 20,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def pad_and_truncate(sequence, maxlen, dtype='int64', padding='post', truncating='post', value=0):\n",
+    "    x = (np.ones(maxlen) * value).astype(dtype)\n",
+    "    if truncating == 'pre':\n",
+    "        trunc = sequence[-maxlen:]\n",
+    "    else:\n",
+    "        trunc = sequence[:maxlen]\n",
+    "    trunc = np.asarray(trunc, dtype=dtype)\n",
+    "    if padding == 'post':\n",
+    "        x[:len(trunc)] = trunc\n",
+    "    else:\n",
+    "        x[-len(trunc):] = trunc\n",
+    "    return x\n",
+    "\n",
+    "class Tokenizer4Bert:\n",
+    "    def __init__(self, max_seq_len, pretrained_bert_name):\n",
+    "        self.tokenizer = BertTokenizer.from_pretrained(pretrained_bert_name)\n",
+    "        self.max_seq_len = max_seq_len\n",
+    "\n",
+    "    def text_to_sequence(self, text, reverse=False, padding='post', truncating='post'):\n",
+    "        sequence = self.tokenizer.convert_tokens_to_ids(self.tokenizer.tokenize(text))\n",
+    "        if len(sequence) == 0:\n",
+    "            sequence = [0]\n",
+    "        if reverse:\n",
+    "            sequence = sequence[::-1]\n",
+    "        return pad_and_truncate(sequence, self.max_seq_len, padding=padding, truncating=truncating)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 21,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def prepare_data(text_left, aspect, text_right, tokenizer):\n",
+    "    text_left = text_left.lower().strip()\n",
+    "    text_right = text_right.lower().strip()\n",
+    "    aspect = aspect.lower().strip()\n",
+    "    \n",
+    "    text_raw_indices = tokenizer.text_to_sequence(text_left + \" \" + aspect + \" \" + text_right) \n",
+    "    aspect_indices = tokenizer.text_to_sequence(aspect)\n",
+    "    aspect_len = np.sum(aspect_indices != 0)\n",
+    "    text_bert_indices = tokenizer.text_to_sequence('[CLS] ' + text_left + \" \" + aspect + \" \" + text_right + ' [SEP] ' + aspect + \" [SEP]\")\n",
+    "    text_raw_bert_indices = tokenizer.text_to_sequence(\n",
+    "        \"[CLS] \" + text_left + \" \" + aspect + \" \" + text_right + \" [SEP]\")\n",
+    "    bert_segments_ids = np.asarray([0] * (np.sum(text_raw_indices != 0) + 2) + [1] * (aspect_len + 1))\n",
+    "    bert_segments_ids = pad_and_truncate(bert_segments_ids, tokenizer.max_seq_len)\n",
+    "    aspect_bert_indices = tokenizer.text_to_sequence(\"[CLS] \" + aspect + \" [SEP]\")\n",
+    "\n",
+    "    return text_bert_indices, bert_segments_ids, text_raw_bert_indices, aspect_bert_indices"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 22,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def get_parameters():\n",
+    "    parser = argparse.ArgumentParser()\n",
+    "    parser.add_argument('--model_name', default='bert_spc', type=str)\n",
+    "    parser.add_argument('--dataset', default='own_dataset', type=str, help='twitter, restaurant, laptop, own_dataset')\n",
+    "    parser.add_argument('--optimizer', default='adam', type=str)\n",
+    "    parser.add_argument('--initializer', default='xavier_uniform_', type=str)\n",
+    "    parser.add_argument('--learning_rate', default=5e-5, type=float, help='try 5e-5, 2e-5 for BERT, 1e-3 for others')\n",
+    "    parser.add_argument('--dropout', default=0.1, type=float)\n",
+    "    parser.add_argument('--l2reg', default=0.01, type=float)\n",
+    "    parser.add_argument('--num_epoch', default=2, type=int, help='try larger number for non-BERT models') ##! 10!\n",
+    "    parser.add_argument('--batch_size', default=16, type=int, help='try 16, 32, 64 for BERT models') ##!\n",
+    "    parser.add_argument('--log_step', default=5, type=int)\n",
+    "    parser.add_argument('--embed_dim', default=300, type=int)\n",
+    "    parser.add_argument('--hidden_dim', default=300, type=int)\n",
+    "    parser.add_argument('--bert_dim', default=768, type=int)\n",
+    "    parser.add_argument('--pretrained_bert_name', default='bert-base-multilingual-uncased', type=str)##!\n",
+    "    parser.add_argument('--max_seq_len', default=512, type=int)##!\n",
+    "    parser.add_argument('--polarities_dim', default=3, type=int)\n",
+    "    parser.add_argument('--hops', default=3, type=int)\n",
+    "    parser.add_argument('--device', default=None, type=str, help='e.g. cuda:0')\n",
+    "    parser.add_argument('--seed', default=None, type=int, help='set seed for reproducibility')\n",
+    "    parser.add_argument('--valset_ratio', default=0, type=float, help='set ratio between 0 and 1 for validation support')\n",
+    "    # The following parameters are only valid for the lcf-bert model\n",
+    "    parser.add_argument('--local_context_focus', default='cdm', type=str, help='local context focus mode, cdw or cdm')\n",
+    "    parser.add_argument('--SRD', default=3, type=int, help='semantic-relative-distance, see the paper of LCF-BERT model')\n",
+    "    #opt = parser.parse_args()\n",
+    "    opt, unknown = parser.parse_known_args()\n",
+    "    return opt"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 23,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "MODEL_NAME='bert-base-multilingual-uncased'"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 24,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "model_classes = {\n",
+    "    'bert_spc': BERT_SPC\n",
+    "}\n",
+    "state_dict_paths = {\n",
+    "    'bert_spc': 'state_dict/bert_spc_own_dataset_val_acc0.8458'\n",
+    "}\n",
+    "\n",
+    "opt = get_parameters()\n",
+    "opt.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 25,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "tokenizer = Tokenizer4Bert(opt.max_seq_len, opt.pretrained_bert_name)\n",
+    "bert = BertModel.from_pretrained(opt.pretrained_bert_name)\n",
+    "model = model_classes[opt.model_name](bert, opt).to(opt.device)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 26,
+   "metadata": {},
+   "outputs": [
+    {
+     "name": "stdout",
+     "output_type": "stream",
+     "text": [
+      "loading model bert_spc ...\n"
+     ]
+    },
+    {
+     "data": {
+      "text/plain": [
+       "<All keys matched successfully>"
+      ]
+     },
+     "execution_count": 26,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "print('loading model {0} ...'.format(opt.model_name))\n",
+    "model.load_state_dict(torch.load(state_dict_paths[opt.model_name]))"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 27,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/plain": [
+       "<torch.autograd.grad_mode.set_grad_enabled at 0x1253c2290>"
+      ]
+     },
+     "execution_count": 27,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "model.eval()\n",
+    "torch.autograd.set_grad_enabled(False)"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 29,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "df_all4 = df_all3.copy()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 62,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "def make_prediction_for_row(sent):\n",
+    "    left_part = sent.split('$T$')[0]\n",
+    "    entity = 'ENT'\n",
+    "    right_part = sent.split('$T$')[1]\n",
+    "    text_bert_indices, bert_segments_ids, text_raw_bert_indices, aspect_bert_indices = \\\n",
+    "    prepare_data(left_part, entity, right_part, tokenizer)  \n",
+    "    text_bert_indices = torch.tensor([text_bert_indices], dtype=torch.int64).to(opt.device)\n",
+    "    bert_segments_ids = torch.tensor([bert_segments_ids], dtype=torch.int64).to(opt.device)\n",
+    "    text_raw_bert_indices = torch.tensor([text_raw_bert_indices], dtype=torch.int64).to(opt.device)\n",
+    "    aspect_bert_indices = torch.tensor([aspect_bert_indices], dtype=torch.int64).to(opt.device)\n",
+    "    inputs = [text_bert_indices, bert_segments_ids, text_raw_bert_indices, aspect_bert_indices]\n",
+    "    outputs = model(inputs)\n",
+    "    t_probs = F.softmax(outputs, dim=-1).cpu().detach().numpy()#.numpy()\n",
+    "    return t_probs.argmax(axis=-1) - 1"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 63,
+   "metadata": {},
+   "outputs": [
+    {
+     "data": {
+      "text/html": [
+       "<div>\n",
+       "<style scoped>\n",
+       "    .dataframe tbody tr th:only-of-type {\n",
+       "        vertical-align: middle;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe tbody tr th {\n",
+       "        vertical-align: top;\n",
+       "    }\n",
+       "\n",
+       "    .dataframe thead th {\n",
+       "        text-align: right;\n",
+       "    }\n",
+       "</style>\n",
+       "<table border=\"1\" class=\"dataframe\">\n",
+       "  <thead>\n",
+       "    <tr style=\"text-align: right;\">\n",
+       "      <th></th>\n",
+       "      <th>short_line</th>\n",
+       "      <th>entity</th>\n",
+       "      <th>label</th>\n",
+       "      <th>tp</th>\n",
+       "      <th>len2</th>\n",
+       "    </tr>\n",
+       "  </thead>\n",
+       "  <tbody>\n",
+       "    <tr>\n",
+       "      <th>2</th>\n",
+       "      <td>Москвича избили и порезали при попытке купить ...</td>\n",
+       "      <td>ENT</td>\n",
+       "      <td>-1</td>\n",
+       "      <td>train</td>\n",
+       "      <td>84</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>4</th>\n",
+       "      <td>id138736268|Анна тогда сделайте подарок себе с...</td>\n",
+       "      <td>ENT</td>\n",
+       "      <td>1</td>\n",
+       "      <td>train</td>\n",
+       "      <td>167</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>5</th>\n",
+       "      <td>внимание ворует семечки в $T$</td>\n",
+       "      <td>ENT</td>\n",
+       "      <td>-1</td>\n",
+       "      <td>train</td>\n",
+       "      <td>29</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>8</th>\n",
+       "      <td>Мясо Мираторг особенно радуют комменты с перво...</td>\n",
+       "      <td>ENT</td>\n",
+       "      <td>-1</td>\n",
+       "      <td>train</td>\n",
+       "      <td>402</td>\n",
+       "    </tr>\n",
+       "    <tr>\n",
+       "      <th>9</th>\n",
+       "      <td>У нас Дикси $T$ магнит спар это все рядом с домом</td>\n",
+       "      <td>ENT</td>\n",
+       "      <td>1</td>\n",
+       "      <td>train</td>\n",
+       "      <td>49</td>\n",
+       "    </tr>\n",
+       "  </tbody>\n",
+       "</table>\n",
+       "</div>"
+      ],
+      "text/plain": [
+       "                                          short_line entity  label     tp  \\\n",
+       "2  Москвича избили и порезали при попытке купить ...    ENT     -1  train   \n",
+       "4  id138736268|Анна тогда сделайте подарок себе с...    ENT      1  train   \n",
+       "5                      внимание ворует семечки в $T$    ENT     -1  train   \n",
+       "8  Мясо Мираторг особенно радуют комменты с перво...    ENT     -1  train   \n",
+       "9  У нас Дикси $T$ магнит спар это все рядом с домом    ENT      1  train   \n",
+       "\n",
+       "   len2  \n",
+       "2    84  \n",
+       "4   167  \n",
+       "5    29  \n",
+       "8   402  \n",
+       "9    49  "
+      ]
+     },
+     "execution_count": 63,
+     "metadata": {},
+     "output_type": "execute_result"
+    }
+   ],
+   "source": [
+    "df_all4.head()"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": 78,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "df_all4.to_csv('df_all4.csv')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "%%time\n",
+    "with concurrent.futures.ThreadPoolExecutor(4) as pool:\n",
+    "    df_all4['pred_label'] = list(\n",
+    "        pool.map(make_prediction_for_row, df_all4['short_line'])\n",
+    "    )"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": [
+    "df_all4_calc.read_csv('df_all4_calc.csv')"
+   ]
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  },
+  {
+   "cell_type": "code",
+   "execution_count": null,
+   "metadata": {},
+   "outputs": [],
+   "source": []
+  }
+ ],
+ "metadata": {
+  "kernelspec": {
+   "display_name": "Python 3",
+   "language": "python",
+   "name": "python3"
+  },
+  "language_info": {
+   "codemirror_mode": {
+    "name": "ipython",
+    "version": 3
+   },
+   "file_extension": ".py",
+   "mimetype": "text/x-python",
+   "name": "python",
+   "nbconvert_exporter": "python",
+   "pygments_lexer": "ipython3",
+   "version": "3.7.6"
+  }
+ },
+ "nbformat": 4,
+ "nbformat_minor": 4
+}
